@@ -3,8 +3,7 @@
 DSMClient::DSMClient(std::string name) : _name(name),
                                          _segment(open_only, _name.c_str())
 {
-    /* _lock = _segment.find<Lock>("Lock").first; */
-    _ready = _segment.find<bool>("Ready").first;
+    _lock = _segment.find<Lock>("Lock").first;
     _bufferDefinitions = _segment.find<BufferDefinitionVector>("BufferDefinitionVector").first;
     _bufferMap = _segment.find<BufferMap>("BufferMap").first;
     initialize();
@@ -22,7 +21,9 @@ void DSMClient::initialize() {
 }
 
 void DSMClient::start() {
-    *_ready = true;
+    scoped_lock<interprocess_mutex> lock(_lock->mutex);
+    _lock->isReady = true;
+    _lock->ready.notify_one();
 }
 
 std::string DSMClient::registerLocalBuffer(std::string name, std::string ipaddr, std::string pass) {

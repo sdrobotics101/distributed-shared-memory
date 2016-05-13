@@ -1,3 +1,6 @@
+#ifndef DSMCLIENT_H
+#define DSMCLIENT_H
+
 #include <string>
 #include <tuple>
 
@@ -7,6 +10,8 @@
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/interprocess_condition.hpp>
+
+#include "Lock.h"
 
 using namespace boost::interprocess;
 
@@ -18,11 +23,6 @@ typedef std::tuple<std::string, std::string, std::string> BufferDefinition;
 typedef allocator<BufferDefinition, managed_shared_memory::segment_manager> SharedBufferDefinitionAllocator;
 typedef vector<BufferDefinition, SharedBufferDefinitionAllocator> BufferDefinitionVector;
 
-/* struct Lock { */
-/*     Lock() {} */
-/*     interprocess_mutex mutex; */
-/*     interprocess_condition ready; */
-/* }; */
 
 class DSMClient {
     public:
@@ -40,8 +40,9 @@ class DSMClient {
     private:
         std::string _name;
         managed_shared_memory _segment;
-        /* Lock *_lock; */
-        bool *_ready;
+        Lock *_lock;
         BufferDefinitionVector *_bufferDefinitions;
         BufferMap *_bufferMap;
 };
+
+#endif //DSMCLIENT_H
