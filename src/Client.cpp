@@ -1,9 +1,7 @@
 #include "../include/Client.h"
 
 DSMClient::DSMClient(std::string name) : _name(name),
-                                         _segment(create_only, _name.c_str(), 65536),
-                                         _sharedBufferDefinitionAllocator(_segment.get_segment_manager()),
-                                         _sharedBufferAllocator(_segment.get_segment_manager())
+                                         _segment(open_only, _name.c_str())
 {
     /* _lock = _segment.find<Lock>("Lock").first; */
     _ready = _segment.find<bool>("Ready").first;
@@ -20,6 +18,7 @@ DSMClient::~DSMClient() {
 void DSMClient::initialize() {
     //this should read from a config file or something, but for testing, just set some bufs
     registerLocalBuffer("somename", "someaddr", "somepass");
+    registerLocalBuffer("somename1", "someaddr1", "somepass1");
 }
 
 void DSMClient::start() {

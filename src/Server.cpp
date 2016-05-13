@@ -22,6 +22,8 @@ DSMServer::~DSMServer() {
 
 void DSMServer::dump() {
     for (int i = 0; i < (int)_bufferDefinitions->size(); i++){
-        std::cout << std::get<0>((*_bufferDefinitions)[i]) << std::endl;
+        std::cout << std::get<0>((*_bufferDefinitions)[i]) << " ";
+        std::cout << std::get<1>((*_bufferDefinitions)[i]) << " ";
+        std::cout << std::get<2>((*_bufferDefinitions)[i]) << std::endl;
     }
 }

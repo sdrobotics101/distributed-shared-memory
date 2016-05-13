@@ -19,7 +19,7 @@ file(GLOB TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*.cpp")
 
 add_executable(${PROJECT_TEST_NAME} ${SOURCES} ${TEST_SOURCES})
 target_link_libraries(${PROJECT_TEST_NAME} ${GTEST_BOTH_LIBRARIES})
-target_compile_definitions(${PROJECT_TEST_NAME})
+# target_compile_definitions(${PROJECT_TEST_NAME})
 
 enable_testing()
 add_test(test "./${PROJECT_TEST_NAME}")
