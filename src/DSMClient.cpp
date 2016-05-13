@@ -1,13 +1,6 @@
-#include "../include/Client.h"
+#include "../include/DSMClient.h"
 
-DSMClient::DSMClient(std::string name) : _name(name),
-                                         _segment(open_or_create, _name.c_str(), 65536),
-                                         _sharedBufferDefinitionAllocator(_segment.get_segment_manager()),
-                                         _sharedBufferAllocator(_segment.get_segment_manager())
-{
-    _lock = _segment.find_or_construct<Lock>("Lock")();
-    _bufferDefinitions = _segment.find_or_construct<BufferDefinitionVector>("BufferDefinitionVector")(_sharedBufferDefinitionAllocator);
-    _bufferMap = _segment.find_or_construct<BufferMap>("BufferMap")(_sharedBufferAllocator);
+DSMClient::DSMClient(std::string name) : DSMBase(name) {
     initialize();
     start();
 }

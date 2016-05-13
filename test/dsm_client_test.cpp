@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../include/Client.h"
+#include "../include/DSMClient.h"
 
 int main() {
     volatile DSMClient _client("serv");

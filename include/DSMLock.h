@@ -1,5 +1,5 @@
-#ifndef LOCK_H
-#define LOCK_H
+#ifndef DSMLOCK_H
+#define DSMLOCK_H
 
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/interprocess_condition.hpp>
@@ -11,4 +11,4 @@ struct Lock {
     boost::interprocess::interprocess_condition ready;
 };
 
-#endif //LOCK_H
+#endif //DSMLOCK_H

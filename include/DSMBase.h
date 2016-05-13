@@ -1,5 +1,5 @@
-#ifndef DSMCLIENT_H
-#define DSMCLIENT_H
+#ifndef DSMBASE_H
+#define DSMBASE_H
 
 #include <string>
 #include <tuple>
@@ -11,7 +11,7 @@
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/interprocess_condition.hpp>
 
-#include "Lock.h"
+#include "DSMLock.h"
 
 using namespace boost::interprocess;
 
@@ -23,30 +23,18 @@ typedef std::tuple<std::string, std::string, std::string> BufferDefinition;
 typedef allocator<BufferDefinition, managed_shared_memory::segment_manager> SharedBufferDefinitionAllocator;
 typedef vector<BufferDefinition, SharedBufferDefinitionAllocator> BufferDefinitionVector;
 
-
-class DSMClient {
+class DSMBase {
     public:
-        DSMClient(std::string name);
-        ~DSMClient();
-
-        void initialize();
-        void start();
-
-        std::string registerLocalBuffer(std::string name, std::string ipaddr, std::string pass);
-        std::string registerRemoteBuffer(std::string name, std::string ipaddr, std::string pass);
-
-        /* void getRemoteBufferContents(std::string name, Packet packet); */
-        /* void setLocalBufferContents(std::string name, Packet packet); */
-    private:
+        DSMBase(std::string name);
+        virtual ~DSMBase() = 0;
+    protected:
         std::string _name;
         managed_shared_memory _segment;
         Lock *_lock;
-
-        const SharedBufferDefinitionAllocator _sharedBufferDefinitionAllocator;
         BufferDefinitionVector *_bufferDefinitions;
-
-        const SharedBufferAllocator _sharedBufferAllocator;
         BufferMap *_bufferMap;
 };
 
-#endif //DSMCLIENT_H
+inline DSMBase::~DSMBase() {}
+
+#endif //DSMBASE_H

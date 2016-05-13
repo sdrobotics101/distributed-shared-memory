@@ -131,3 +131,6 @@ install_manifest.txt
 # Vim
 *.swp
 Session.vim
+
+# Scratch files
+*scratch*

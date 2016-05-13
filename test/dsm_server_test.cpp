@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../include/Server.h"
+#include "../include/DSMServer.h"
 
 int main() {
     DSMServer _server("serv");
