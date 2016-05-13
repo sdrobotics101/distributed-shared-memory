@@ -14,13 +14,20 @@ file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
 find_package(GTest REQUIRED)
 include_directories("${GTEST_INCLUDE_DIR}")
 
-set(PROJECT_TEST_NAME ${PROJECT_NAME_STR}_test)
-file(GLOB TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*.cpp")
+set(PROJECT_TEST_SERVER_NAME ${PROJECT_NAME_STR}_server_test)
+file(GLOB TEST_SERVER_SOURCES "${PROJECT_SOURCE_DIR}/test/*server*.cpp")
 
-add_executable(${PROJECT_TEST_NAME} ${SOURCES} ${TEST_SOURCES})
-target_link_libraries(${PROJECT_TEST_NAME} ${GTEST_BOTH_LIBRARIES})
+set(PROJECT_TEST_CLIENT_NAME ${PROJECT_NAME_STR}_client_test)
+file(GLOB TEST_CLIENT_SOURCES "${PROJECT_SOURCE_DIR}/test/*client*.cpp")
+
+add_executable(${PROJECT_TEST_SERVER_NAME} ${SOURCES} ${TEST_SERVER_SOURCES})
+target_link_libraries(${PROJECT_TEST_SERVER_NAME} ${GTEST_BOTH_LIBRARIES})
 # target_compile_definitions(${PROJECT_TEST_NAME})
 
-enable_testing()
-add_test(test "./${PROJECT_TEST_NAME}")
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS ${PROJECT_TEST_NAME})
+add_executable(${PROJECT_TEST_CLIENT_NAME} ${SOURCES} ${TEST_CLIENT_SOURCES})
+target_link_libraries(${PROJECT_TEST_CLIENT_NAME} ${GTEST_BOTH_LIBRARIES})
+# target_compile_definitions(${PROJECT_TEST_NAME})
+
+# enable_testing()
+# add_test(test "./${PROJECT_TEST_NAME}")
+# add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS ${PROJECT_TEST_NAME})
