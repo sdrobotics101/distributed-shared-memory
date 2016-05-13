@@ -41,7 +41,11 @@ class DSMClient {
         std::string _name;
         managed_shared_memory _segment;
         Lock *_lock;
+
+        const SharedBufferDefinitionAllocator _sharedBufferDefinitionAllocator;
         BufferDefinitionVector *_bufferDefinitions;
+
+        const SharedBufferAllocator _sharedBufferAllocator;
         BufferMap *_bufferMap;
 };
 
