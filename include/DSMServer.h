@@ -13,6 +13,8 @@ class DSMServer : public DSMBase {
         void start();
 
         void dump();
+    private:
+        void allocateBuffers();
 };
 
 #endif //DSMSERVER_H

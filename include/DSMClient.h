@@ -1,6 +1,9 @@
 #ifndef DSMCLIENT_H
 #define DSMCLIENT_H
 
+#include <set>
+#include <iostream>
+
 #include "DSMBase.h"
 
 class DSMClient : public DSMBase {
@@ -11,11 +14,14 @@ class DSMClient : public DSMBase {
         void initialize();
         void start();
 
-        std::string registerLocalBuffer(std::string name, std::string ipaddr, std::string pass);
-        std::string registerRemoteBuffer(std::string name, std::string ipaddr, std::string pass);
+        bool registerLocalBuffer(std::string name, std::string pass, int length);
+        std::string registerRemoteBuffer(std::string name, std::string pass, std::string ipaddr);
 
         /* void getRemoteBufferContents(std::string name, Packet packet); */
         /* void setLocalBufferContents(std::string name, Packet packet); */
+    private:
+        std::set<std::string> _localBufferNames;
+        std::set<std::string> _remoteBufferNames;
 };
 
 #endif //DSMCLIENT_H

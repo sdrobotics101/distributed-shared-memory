@@ -10,18 +10,26 @@
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/interprocess_condition.hpp>
+#include <boost/interprocess/offset_ptr.hpp>
 
 #include "DSMLock.h"
 
 using namespace boost::interprocess;
 
-typedef std::tuple<managed_shared_memory::handle_t, int> Buffer;
-typedef allocator<Buffer, managed_shared_memory::segment_manager> SharedBufferAllocator;
-typedef map<std::string, Buffer, SharedBufferAllocator> BufferMap;
+typedef std::tuple<managed_shared_memory::handle_t, int, offset_ptr<interprocess_mutex>> Buffer;
+typedef std::pair<const std::string, Buffer> MappedBuffer;
+typedef allocator<MappedBuffer, managed_shared_memory::segment_manager> BufferAllocator;
+typedef map<std::string, Buffer, std::less<std::string>, BufferAllocator> BufferMap;
 
-typedef std::tuple<std::string, std::string, std::string> BufferDefinition;
-typedef allocator<BufferDefinition, managed_shared_memory::segment_manager> SharedBufferDefinitionAllocator;
-typedef vector<BufferDefinition, SharedBufferDefinitionAllocator> BufferDefinitionVector;
+/* For local buffers, this takes the form of <name, pass, length> */
+typedef std::tuple<std::string, std::string, int> LocalBufferDefinition;
+typedef allocator<LocalBufferDefinition, managed_shared_memory::segment_manager> LocalBufferDefinitionAllocator;
+typedef vector<LocalBufferDefinition, LocalBufferDefinitionAllocator> LocalBufferDefinitionVector;
+
+/* For remote buffers, this takes the form of <name, pass, ipaddr> */
+typedef std::tuple<std::string, std::string, std::string> RemoteBufferDefinition;
+typedef allocator<RemoteBufferDefinition, managed_shared_memory::segment_manager> RemoteBufferDefinitionAllocator;
+typedef vector<RemoteBufferDefinition, RemoteBufferDefinitionAllocator> RemoteBufferDefinitionVector;
 
 class DSMBase {
     public:
@@ -30,9 +38,13 @@ class DSMBase {
     protected:
         std::string _name;
         managed_shared_memory _segment;
-        Lock *_lock;
-        BufferDefinitionVector *_bufferDefinitions;
-        BufferMap *_bufferMap;
+        DSMLock *_lock;
+
+        LocalBufferDefinitionVector *_localBufferDefinitions;
+        RemoteBufferDefinitionVector *_remoteBufferDefinitions;
+
+        BufferMap *_localBufferMap;
+        BufferMap *_remoteBufferMap;
 };
 
 inline DSMBase::~DSMBase() {}
