@@ -26,14 +26,11 @@ void DSMClient::start() {
     if (_lock->isReady) {
         _lock->ready.wait(lock);
     }
-    //TESTING CODE
-    managed_shared_memory::handle_t handle = std::get<0>((*_localBufferMap)["name0"]);
-    void* ptr = _segment.get_address_from_handle(handle);
-    for(int i = 0; i < std::get<1>((*_localBufferMap)["name0"]); i++) {
-        std::cout << *((char*)ptr+i);
-    }
-    std::cout << std::endl;
-    //END TESTING CODE
+
+    std::cout << "CLIENT START SLEEP" << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::cout << "CLIENT STOP SLEEP" << std::endl;
+
     _lock->isReady = true;
     _lock->ready.notify_one();
 }

@@ -11,12 +11,13 @@
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/interprocess_condition.hpp>
 #include <boost/interprocess/offset_ptr.hpp>
+#include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
 
 #include "DSMLock.h"
 
 using namespace boost::interprocess;
 
-typedef std::tuple<managed_shared_memory::handle_t, int, offset_ptr<interprocess_mutex>> Buffer;
+typedef std::tuple<managed_shared_memory::handle_t, int, offset_ptr<interprocess_upgradable_mutex>> Buffer;
 typedef std::pair<const std::string, Buffer> MappedBuffer;
 typedef allocator<MappedBuffer, managed_shared_memory::segment_manager> BufferAllocator;
 typedef map<std::string, Buffer, std::less<std::string>, BufferAllocator> BufferMap;
