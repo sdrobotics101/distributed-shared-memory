@@ -8,7 +8,7 @@
 #include <boost/array.hpp>
 #include <boost/thread.hpp>
 
-#include "DSMBase.h"
+#include "../Shared/DSMBase.h"
 
 using namespace boost::asio;
 

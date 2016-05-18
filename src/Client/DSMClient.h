@@ -6,7 +6,7 @@
 #include <thread>
 #include <chrono>
 
-#include "DSMBase.h"
+#include "../Shared/DSMBase.h"
 
 class DSMClient : public DSMBase {
     public:

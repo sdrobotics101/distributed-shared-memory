@@ -8,29 +8,35 @@ project(${PROJECT_NAME_STR})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -std=c++11")
 
-include_directories("${PROJECT_SOURCE_DIR}/include")
-file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
-
-# find_package(GTest REQUIRED)
-# include_directories("${GTEST_INCLUDE_DIR}")
-
 find_package(Boost REQUIRED system)
 include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 
-set(PROJECT_TEST_SERVER_NAME ${PROJECT_NAME_STR}_server_test)
-file(GLOB TEST_SERVER_SOURCES "${PROJECT_SOURCE_DIR}/test/*server*.cpp")
+# shared sources
+include_directories("${PROJECT_SOURCE_DIR}/src/Shared")
+file(GLOB SHARED_SOURCES "${PROJECT_SOURCE_DIR}/src/Shared/*.cpp")
 
-set(PROJECT_TEST_CLIENT_NAME ${PROJECT_NAME_STR}_client_test)
-file(GLOB TEST_CLIENT_SOURCES "${PROJECT_SOURCE_DIR}/test/*client*.cpp")
+# server sources
+include_directories("${PROJECT_SOURCE_DIR}/src/Server")
+file(GLOB SERVER_SOURCES "${PROJECT_SOURCE_DIR}/src/Server/*.cpp")
 
-add_executable(${PROJECT_TEST_SERVER_NAME} ${SOURCES} ${TEST_SERVER_SOURCES})
-target_link_libraries(${PROJECT_TEST_SERVER_NAME} ${Boost_LIBRARIES})
+# client sources
+include_directories("${PROJECT_SOURCE_DIR}/src/Client")
+file(GLOB CLIENT_SOURCES "${PROJECT_SOURCE_DIR}/src/Client/*.cpp")
+
+# server test sources
+set(PROJECT_SERVER_TEST_NAME ${PROJECT_NAME_STR}_server_test)
+file(GLOB SERVER_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*server*.cpp")
+
+# client test sources
+set(PROJECT_CLIENT_TEST_NAME ${PROJECT_NAME_STR}_client_test)
+file(GLOB CLIENT_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*client*.cpp")
+
+# server test target
+add_executable(${PROJECT_SERVER_TEST_NAME} ${SHARED_SOURCES} ${SERVER_SOURCES} ${SERVER_TEST_SOURCES})
+target_link_libraries(${PROJECT_SERVER_TEST_NAME} ${Boost_LIBRARIES})
 # target_compile_definitions(${PROJECT_TEST_NAME})
 
-add_executable(${PROJECT_TEST_CLIENT_NAME} ${SOURCES} ${TEST_CLIENT_SOURCES})
-target_link_libraries(${PROJECT_TEST_CLIENT_NAME} ${Boost_LIBRARIES})
+# client test target
+add_executable(${PROJECT_CLIENT_TEST_NAME} ${SHARED_SOURCES} ${CLIENT_SOURCES} ${CLIENT_TEST_SOURCES})
+target_link_libraries(${PROJECT_CLIENT_TEST_NAME} ${Boost_LIBRARIES})
 # target_compile_definitions(${PROJECT_TEST_NAME})
-
-# enable_testing()
-# add_test(test "./${PROJECT_TEST_NAME}")
-# add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS ${PROJECT_TEST_NAME})

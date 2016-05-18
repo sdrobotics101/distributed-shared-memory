@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../include/DSMClient.h"
+#include "../src/Client/DSMClient.h"
 
 int main(int argc, char** argv) {
     std::cout << "Starting" << std::endl;

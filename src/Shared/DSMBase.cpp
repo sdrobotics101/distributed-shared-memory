@@ -1,4 +1,4 @@
-#include "../include/DSMBase.h"
+#include "DSMBase.h"
 
 DSMBase::DSMBase(std::string name) : _name(name),
                                      _segment(open_or_create, _name.c_str(), 65536)

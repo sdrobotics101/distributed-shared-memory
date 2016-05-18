@@ -1,4 +1,4 @@
-#include "../include/DSMServer.h"
+#include "DSMServer.h"
 
 DSMServer::DSMServer(std::string name, int port) : DSMBase(name),
                                                    _ioService(),

@@ -1,4 +1,4 @@
-#include "../include/DSMClient.h"
+#include "DSMClient.h"
 
 DSMClient::DSMClient(std::string name) : DSMBase(name) {
     initialize();
