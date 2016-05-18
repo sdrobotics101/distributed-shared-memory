@@ -23,21 +23,28 @@ DSMServer::~DSMServer() {
 }
 
 void DSMServer::start() {
-    scoped_lock<interprocess_mutex> lock(_lock->mutex);
+    scoped_lock<interprocess_upgradable_mutex> lock(_lock->mutex);
     if (!_lock->isReady) {
         _lock->ready.wait(lock);
     }
 
     dump();
 
-    allocateLocalBuffers();
+    if (_lock->localModified) {
+        allocateLocalBuffers();
+        _lock->localModified = false;
+    }
+
+    /* if(_lock->remoteModified) { */
+    /*     allocateRemoteBuffers(); */
+    /*     _lock->remoteModified = false; */
+    /* } */
 
     startReceive();
     _ioService.run();
 
     _lock->isReady = false;
     _lock->ready.notify_one();
-
     if (!_lock->isReady) {
         _lock->ready.wait(lock);
     }
@@ -61,14 +68,25 @@ void DSMServer::dump() {
     }
 }
 
+/**
+ * @brief iterate through local buffer definition vector and create the specified buffers in shared memory
+ */
 void DSMServer::allocateLocalBuffers() {
     // should already be locked
     for (auto const &def : *_localBufferDefinitions) {
-        void* buf = _segment.allocate(std::get<2>(def));
+        std::string name = std::get<0>(def);
+        if (_createdLocalBuffers.find(name) != _createdLocalBuffers.end()) {
+            continue;
+        }
+        int len = std::get<2>(def);
+
+        //TODO make these two allocate calls into one
+        void* buf = _segment.allocate(len);
         managed_shared_memory::handle_t handle = _segment.get_handle_from_address(buf);
         offset_ptr<interprocess_upgradable_mutex> mutex = static_cast<interprocess_upgradable_mutex*>(_segment.allocate(sizeof(interprocess_upgradable_mutex)));
         new (mutex.get()) interprocess_upgradable_mutex;
-        _localBufferMap->insert(std::make_pair(std::get<0>(def), std::make_tuple(handle, std::get<2>(def), mutex)));
+        _localBufferMap->insert(std::make_pair(name, std::make_tuple(handle, len, mutex)));
+        _createdLocalBuffers.insert(name);
     }
 }
 

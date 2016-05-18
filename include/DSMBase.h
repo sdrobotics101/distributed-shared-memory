@@ -12,8 +12,7 @@
 #include <boost/interprocess/sync/interprocess_condition.hpp>
 #include <boost/interprocess/offset_ptr.hpp>
 #include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
-
-#include "DSMLock.h"
+#include <boost/interprocess/sync/sharable_lock.hpp>
 
 using namespace boost::interprocess;
 
@@ -39,7 +38,14 @@ class DSMBase {
     protected:
         std::string _name;
         managed_shared_memory _segment;
-        DSMLock *_lock;
+        struct DSMLock {
+            DSMLock() : isReady(false), localModified(false), remoteModified(false) {}
+            bool isReady;
+            bool localModified;
+            bool remoteModified;
+            boost::interprocess::interprocess_upgradable_mutex mutex;
+            boost::interprocess::interprocess_condition ready;
+        } *_lock;
 
         LocalBufferDefinitionVector *_localBufferDefinitions;
         RemoteBufferDefinitionVector *_remoteBufferDefinitions;

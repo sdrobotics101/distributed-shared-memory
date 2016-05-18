@@ -2,6 +2,7 @@
 #define DSMSERVER_H
 
 #include <iostream>
+#include <set>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/array.hpp>
@@ -32,6 +33,9 @@ class DSMServer : public DSMBase {
         ip::udp::socket _socket;
         ip::udp::endpoint _endpoint;
         boost::array<char, 256> _receiveBuffer;
+
+        std::set<std::string> _createdLocalBuffers;
+        std::set<std::string> _createdRemoteBuffers;
 };
 
 #endif //DSMSERVER_H

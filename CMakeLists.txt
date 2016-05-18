@@ -15,7 +15,7 @@ file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
 # include_directories("${GTEST_INCLUDE_DIR}")
 
 find_package(Boost REQUIRED system)
-include_directories(${Boost_INCLUDE_DIR})
+include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 
 set(PROJECT_TEST_SERVER_NAME ${PROJECT_NAME_STR}_server_test)
 file(GLOB TEST_SERVER_SOURCES "${PROJECT_SOURCE_DIR}/test/*server*.cpp")
