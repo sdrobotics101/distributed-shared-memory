@@ -2,6 +2,7 @@
 #define DSMSERVER_H
 
 #include <iostream>
+#include <cstdio>
 #include <set>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
@@ -18,14 +19,11 @@ class DSMServer : public DSMBase {
         virtual ~DSMServer();
 
         void start();
-
-        void dump();
     private:
-        void allocateLocalBuffers();
+        void allocateLocalBuffer(std::string name, uint16_t size);
         /* void allocateRemoteBuffers(); */
 
         void startReceive();
-
         void handleReceive(const boost::system::error_code& error, std::size_t bytesTransferred);
         /* void handleSend(); */
 
@@ -36,6 +34,8 @@ class DSMServer : public DSMBase {
 
         std::set<std::string> _createdLocalBuffers;
         std::set<std::string> _createdRemoteBuffers;
+
+        DSMMessage _receivedMessage;
 };
 
 #endif //DSMSERVER_H

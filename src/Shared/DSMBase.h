@@ -3,6 +3,7 @@
 
 #include <string>
 #include <tuple>
+#include <cstdint>
 
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/containers/vector.hpp>
@@ -13,23 +14,18 @@
 #include <boost/interprocess/offset_ptr.hpp>
 #include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
 #include <boost/interprocess/sync/sharable_lock.hpp>
+#include <boost/interprocess/ipc/message_queue.hpp>
+
+#define SEGMENT_SIZE 65536
+#define MAX_NUM_MESSAGES 10
+#define MESSAGE_SIZE 32
 
 using namespace boost::interprocess;
 
-typedef std::tuple<managed_shared_memory::handle_t, int, offset_ptr<interprocess_upgradable_mutex>> Buffer;
+typedef std::tuple<managed_shared_memory::handle_t, std::uint16_t, offset_ptr<interprocess_upgradable_mutex>> Buffer;
 typedef std::pair<const std::string, Buffer> MappedBuffer;
 typedef allocator<MappedBuffer, managed_shared_memory::segment_manager> BufferAllocator;
 typedef map<std::string, Buffer, std::less<std::string>, BufferAllocator> BufferMap;
-
-/* For local buffers, this takes the form of <name, pass, length> */
-typedef std::tuple<std::string, std::string, int> LocalBufferDefinition;
-typedef allocator<LocalBufferDefinition, managed_shared_memory::segment_manager> LocalBufferDefinitionAllocator;
-typedef vector<LocalBufferDefinition, LocalBufferDefinitionAllocator> LocalBufferDefinitionVector;
-
-/* For remote buffers, this takes the form of <name, pass, ipaddr> */
-typedef std::tuple<std::string, std::string, std::string> RemoteBufferDefinition;
-typedef allocator<RemoteBufferDefinition, managed_shared_memory::segment_manager> RemoteBufferDefinitionAllocator;
-typedef vector<RemoteBufferDefinition, RemoteBufferDefinitionAllocator> RemoteBufferDefinitionVector;
 
 class DSMBase {
     public:
@@ -38,20 +34,22 @@ class DSMBase {
     protected:
         std::string _name;
         managed_shared_memory _segment;
-        struct DSMLock {
-            DSMLock() : isReady(false), localModified(false), remoteModified(false) {}
-            bool isReady;
-            bool localModified;
-            bool remoteModified;
-            boost::interprocess::interprocess_upgradable_mutex mutex;
-            boost::interprocess::interprocess_condition ready;
-        } *_lock;
 
-        LocalBufferDefinitionVector *_localBufferDefinitions;
-        RemoteBufferDefinitionVector *_remoteBufferDefinitions;
+        message_queue _messageQueue;
 
         BufferMap *_localBufferMap;
         BufferMap *_remoteBufferMap;
+        interprocess_upgradable_mutex* _localBufferMapLock;
+        interprocess_upgradable_mutex* _remoteBufferMapLock;
+
+        struct DSMMessage {
+            uint16_t header;
+            char name[26];      //makes this struct 32 bytes
+            union footer {
+                uint16_t size;  //max buffer size will probably be smaller than max value of 16 bit int
+                uint8_t ipaddr[4];
+            } footer;
+        };
 };
 
 inline DSMBase::~DSMBase() {}

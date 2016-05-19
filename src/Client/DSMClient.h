@@ -16,14 +16,11 @@ class DSMClient : public DSMBase {
         void initialize();
         void start();
 
-        bool registerLocalBuffer(std::string name, std::string pass, int length);
-        std::string registerRemoteBuffer(std::string name, std::string pass, std::string ipaddr);
+        bool registerLocalBuffer(std::string name, uint16_t length);
+        /* std::string registerRemoteBuffer(std::string name, std::string ipaddr); */
 
         /* void getRemoteBufferContents(std::string name, Packet packet); */
         /* void setLocalBufferContents(std::string name, Packet packet); */
-    private:
-        std::set<std::string> _localBufferNames;
-        std::set<std::string> _remoteBufferNames;
 };
 
 #endif //DSMCLIENT_H
