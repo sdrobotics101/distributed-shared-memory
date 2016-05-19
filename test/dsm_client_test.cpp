@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
     } else {
         name = "server";
     }
-    DSMClient _client(name);
+    dsm::Client _client(name);
     _client.registerLocalBuffer("name0", 18);
     _client.registerLocalBuffer("name0", 17);
     _client.registerLocalBuffer("name1", 20);

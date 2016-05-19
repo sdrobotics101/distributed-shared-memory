@@ -26,36 +26,38 @@ typedef std::pair<const std::string, Buffer> MappedBuffer;
 typedef allocator<MappedBuffer, managed_shared_memory::segment_manager> BufferAllocator;
 typedef map<std::string, Buffer, std::less<std::string>, BufferAllocator> BufferMap;
 
-class DSMBase {
-    public:
-        DSMBase(std::string name);
-        virtual ~DSMBase() = 0;
-    protected:
-        std::string _name;
-        managed_shared_memory _segment;
+namespace dsm {
+    class Base {
+        public:
+            Base(std::string name);
+            virtual ~Base() = 0;
+        protected:
+            std::string _name;
+            managed_shared_memory _segment;
 
-        message_queue _messageQueue;
+            message_queue _messageQueue;
 
-        BufferMap *_localBufferMap;
-        BufferMap *_remoteBufferMap;
-        interprocess_upgradable_mutex* _localBufferMapLock;
-        interprocess_upgradable_mutex* _remoteBufferMapLock;
+            BufferMap *_localBufferMap;
+            BufferMap *_remoteBufferMap;
+            interprocess_upgradable_mutex* _localBufferMapLock;
+            interprocess_upgradable_mutex* _remoteBufferMapLock;
 
-        struct DSMMessage {
-            uint16_t header;
-            char name[26];      //makes this struct 32 bytes
-            union footer {
-                uint16_t size;  //max buffer size will probably be smaller than max value of 16 bit int
-                struct in_addr ipaddr;
-            } footer;
-            void reset() {
-                header = 0;
-                strcpy(name, "");
-                footer.size = 0;
-            }
-        } _message;
-};
+            struct QueueMessage {
+                uint16_t header;
+                char name[26];      //makes this struct 32 bytes
+                union footer {
+                    uint16_t size;  //max buffer size will probably be smaller than max value of 16 bit int
+                    struct in_addr ipaddr;
+                } footer;
+                void reset() {
+                    header = 0;
+                    strcpy(name, "");
+                    footer.size = 0;
+                }
+            } _message;
+    };
+}
 
-inline DSMBase::~DSMBase() {}
+inline dsm::Base::~Base() {}
 
 #endif //DSMBASE_H

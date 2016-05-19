@@ -1,13 +1,13 @@
 #include "DSMServer.h"
 
-DSMServer::DSMServer(std::string name, int port) : DSMBase(name),
-                                                   _ioService(),
-                                                   _socket(_ioService, ip::udp::endpoint(ip::udp::v4(), port))
+dsm::Server::Server(std::string name, int port) : Base(name),
+                                                  _ioService(),
+                                                  _socket(_ioService, ip::udp::endpoint(ip::udp::v4(), port))
 {
     start();
 }
 
-DSMServer::~DSMServer() {
+dsm::Server::~Server() {
     for (auto const &i : *_localBufferMap) {
         _segment.deallocate(std::get<2>(i.second).get());
     }
@@ -20,7 +20,7 @@ DSMServer::~DSMServer() {
     shared_memory_object::remove(_name.c_str());
 }
 
-void DSMServer::start() {
+void dsm::Server::start() {
     //do some work to initialize network services, etc
     //create send and receive worker threads
     while(1) {
@@ -49,7 +49,7 @@ void DSMServer::start() {
 }
 
 
-void DSMServer::allocateLocalBuffer(std::string name, uint16_t size) {
+void dsm::Server::allocateLocalBuffer(std::string name, uint16_t size) {
     if (_createdLocalBuffers.find(name) != _createdLocalBuffers.end()) {
         return;
     }
@@ -63,16 +63,16 @@ void DSMServer::allocateLocalBuffer(std::string name, uint16_t size) {
     _localBufferMap->insert(std::make_pair(name, std::make_tuple(handle, size, mutex)));
 }
 
-void DSMServer::startReceive() {
+void dsm::Server::startReceive() {
     _socket.async_receive_from(buffer(_receiveBuffer),
                                _endpoint,
-                               boost::bind(&DSMServer::handleReceive,
+                               boost::bind(&dsm::Server::handleReceive,
                                            this,
                                            placeholders::error,
                                            placeholders::bytes_transferred));
 }
 
-void DSMServer::handleReceive(const boost::system::error_code& error, std::size_t bytesTransferred) {
+void dsm::Server::handleReceive(const boost::system::error_code& error, std::size_t bytesTransferred) {
     if (error) {
         return;
     }

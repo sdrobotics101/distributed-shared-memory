@@ -9,16 +9,18 @@
 
 #include "../Shared/DSMBase.h"
 
-class DSMClient : public DSMBase {
-    public:
-        DSMClient(std::string name);
-        virtual ~DSMClient();
+namespace dsm {
+    class Client : public Base {
+        public:
+            Client(std::string name);
+            virtual ~Client();
 
-        bool registerLocalBuffer(std::string name, uint16_t length);
-        bool registerRemoteBuffer(std::string name, std::string ipaddr);
+            bool registerLocalBuffer(std::string name, uint16_t length);
+            bool registerRemoteBuffer(std::string name, std::string ipaddr);
 
-        /* void getRemoteBufferContents(std::string name, Packet packet); */
-        /* void setLocalBufferContents(std::string name, Packet packet); */
-};
+            /* void getRemoteBufferContents(std::string name, Packet packet); */
+            /* void setLocalBufferContents(std::string name, Packet packet); */
+    };
+}
 
 #endif //DSMCLIENT_H

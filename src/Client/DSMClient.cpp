@@ -1,10 +1,10 @@
 #include "DSMClient.h"
 
-DSMClient::DSMClient(std::string name) : DSMBase(name) {}
+dsm::Client::Client(std::string name) : Base(name) {}
 
-DSMClient::~DSMClient() {}
+dsm::Client::~Client() {}
 
-bool DSMClient::registerLocalBuffer(std::string name, uint16_t length) {
+bool dsm::Client::registerLocalBuffer(std::string name, uint16_t length) {
     if (name.length() > 26) {
         return false;
     }
@@ -17,7 +17,7 @@ bool DSMClient::registerLocalBuffer(std::string name, uint16_t length) {
     return true;
 }
 
-bool DSMClient::registerRemoteBuffer(std::string name, std::string ipaddr) {
+bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr) {
     if (name.length() > 26) {
         return false;
     }

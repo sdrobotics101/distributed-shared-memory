@@ -1,6 +1,6 @@
 #include "DSMBase.h"
 
-DSMBase::DSMBase(std::string name) : _name(name),
+dsm::Base::Base(std::string name) : _name(name),
                                      _segment(open_or_create, _name.c_str(), SEGMENT_SIZE),
                                      _messageQueue(open_or_create, (name+"_queue").c_str(), MAX_NUM_MESSAGES, MESSAGE_SIZE)
 {
