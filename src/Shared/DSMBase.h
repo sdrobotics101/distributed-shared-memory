@@ -4,15 +4,14 @@
 #include <string>
 #include <tuple>
 #include <cstdint>
+#include <netinet/in.h>
 
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/interprocess/containers/vector.hpp>
 #include <boost/interprocess/containers/map.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/sync/interprocess_mutex.hpp>
-#include <boost/interprocess/sync/interprocess_condition.hpp>
 #include <boost/interprocess/offset_ptr.hpp>
 #include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/interprocess/sync/sharable_lock.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
 
@@ -47,9 +46,14 @@ class DSMBase {
             char name[26];      //makes this struct 32 bytes
             union footer {
                 uint16_t size;  //max buffer size will probably be smaller than max value of 16 bit int
-                uint8_t ipaddr[4];
+                struct in_addr ipaddr;
             } footer;
-        };
+            void reset() {
+                header = 0;
+                strcpy(name, "");
+                footer.size = 0;
+            }
+        } _message;
 };
 
 inline DSMBase::~DSMBase() {}

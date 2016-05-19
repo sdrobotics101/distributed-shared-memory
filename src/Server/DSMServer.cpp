@@ -22,29 +22,34 @@ DSMServer::~DSMServer() {
 
 void DSMServer::start() {
     //do some work to initialize network services, etc
-
-    std::cout << sizeof(DSMMessage) << std::endl;
+    //create send and receive worker threads
     while(1) {
         unsigned int priority;
         message_queue::size_type receivedSize;
-        _messageQueue.receive(&_receivedMessage, MESSAGE_SIZE, receivedSize, priority);
-        std::cout << _receivedMessage.name << " " << _receivedMessage.footer.size << std::endl;
+        _messageQueue.receive(&_message, MESSAGE_SIZE, receivedSize, priority);
+        if (_message.header == 0) {
+            std::cout << "LOCAL: " << _message.name << " " << _message.footer.size << std::endl;
+        } else if (_message.header == 1) {
+            std::cout << "REMOTE: " << _message.name << " " << inet_ntoa(_message.footer.ipaddr) << std::endl;
+        } else {
+            std::cout << "UNKNOWN" << std::endl;
+        }
 
-        /* switch(_receivedMessage.header) { */
+        /* switch(_message.header) { */
         /*     case 0: */
-        /*         allocateLocalBuffer(_receivedMessage.name, _receivedMessage.footer.size); */
+        /*         allocateLocalBuffer(_message.name, _message.footer.size); */
         /*         break; */
         /* } */
 
-        if (strcmp(_receivedMessage.name, "end") == 0) {
+        if (strcmp(_message.name, "end") == 0) {
             break;
         }
+        _message.reset();
     }
 }
 
 
 void DSMServer::allocateLocalBuffer(std::string name, uint16_t size) {
-    scoped_lock<interprocess_upgradable_mutex> lock(*_localBufferMapLock);
     if (_createdLocalBuffers.find(name) != _createdLocalBuffers.end()) {
         return;
     }
@@ -53,8 +58,9 @@ void DSMServer::allocateLocalBuffer(std::string name, uint16_t size) {
     managed_shared_memory::handle_t handle = _segment.get_handle_from_address(buf);
     offset_ptr<interprocess_upgradable_mutex> mutex = static_cast<interprocess_upgradable_mutex*>(_segment.allocate(sizeof(interprocess_upgradable_mutex)));
     new (mutex.get()) interprocess_upgradable_mutex;
-    _localBufferMap->insert(std::make_pair(name, std::make_tuple(handle, size, mutex)));
     _createdLocalBuffers.insert(name);
+    scoped_lock<interprocess_upgradable_mutex> lock(*_localBufferMapLock);
+    _localBufferMap->insert(std::make_pair(name, std::make_tuple(handle, size, mutex)));
 }
 
 void DSMServer::startReceive() {

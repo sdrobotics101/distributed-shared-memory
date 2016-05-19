@@ -34,8 +34,6 @@ class DSMServer : public DSMBase {
 
         std::set<std::string> _createdLocalBuffers;
         std::set<std::string> _createdRemoteBuffers;
-
-        DSMMessage _receivedMessage;
 };
 
 #endif //DSMSERVER_H

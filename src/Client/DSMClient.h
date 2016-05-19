@@ -5,6 +5,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <arpa/inet.h>
 
 #include "../Shared/DSMBase.h"
 
@@ -13,11 +14,8 @@ class DSMClient : public DSMBase {
         DSMClient(std::string name);
         virtual ~DSMClient();
 
-        void initialize();
-        void start();
-
         bool registerLocalBuffer(std::string name, uint16_t length);
-        /* std::string registerRemoteBuffer(std::string name, std::string ipaddr); */
+        bool registerRemoteBuffer(std::string name, std::string ipaddr);
 
         /* void getRemoteBufferContents(std::string name, Packet packet); */
         /* void setLocalBufferContents(std::string name, Packet packet); */
