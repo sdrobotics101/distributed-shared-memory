@@ -16,7 +16,7 @@ namespace dsm {
             virtual ~Client();
 
             bool registerLocalBuffer(std::string name, uint16_t length);
-            bool registerRemoteBuffer(std::string name, std::string ipaddr);
+            bool registerRemoteBuffer(std::string name, std::string ipaddr, uint8_t portOffset);
 
             bool disconnectFromBuffer(std::string name);
 

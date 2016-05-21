@@ -1,8 +1,12 @@
 #include "DSMServer.h"
 
 dsm::Server::Server(std::string name, uint8_t portOffset) : Base(name),
-                                                            _portOffset(portOffset) {
-    _socket = new ip::udp::socket(_ioService, ip::udp::endpoint(ip::udp::v4(), BASE_PORT+_portOffset));
+                                                            _portOffset(portOffset)
+{
+    _ioService = new io_service();
+    _senderSocket = new ip::udp::socket(*_ioService);
+    _senderSocket->open(ip::udp::v4());
+    _receiverSocket = new ip::udp::socket(*_ioService, ip::udp::endpoint(ip::udp::v4(), BASE_PORT+_portOffset));
 }
 
 dsm::Server::~Server() {
@@ -13,8 +17,10 @@ dsm::Server::~Server() {
     _segment.destroy<BufferMap>("LocalBufferMap");
     _segment.destroy<BufferMap>("RemoteBufferMap");
 
-    delete _socket;
-    /* _ioService.stop(); */
+    /* clean up network */
+    delete _senderSocket;
+    delete _receiverSocket;
+    delete _ioService;
 
     _isRunning = false;
     _senderThread->join();
@@ -31,7 +37,7 @@ void dsm::Server::start() {
     //create send and receive worker threads
 
     _senderThread = new std::thread(&dsm::Server::senderThreadFunction, this);
-    _receiverThread = new std::thread(&dsm::Server::receieverThreadFunction, this);
+    _receiverThread = new std::thread(&dsm::Server::receiverThreadFunction, this);
 
     while(1) {
         unsigned int priority;
@@ -40,11 +46,11 @@ void dsm::Server::start() {
         switch((_message.header & 0b11110000) >> 4) {
             case CREATE_LOCAL:
                 std::cout << "LOCAL: " << _message.name << " " << _message.footer.size << " " << (_message.header & 0b00001111) << std::endl;
-                allocateLocalBuffer(_message.name, _message.footer.size);
-                _localBufferLocalListeners[_message.name].insert(_message.header & 0b00001111);
+                createLocalBuffer(_message.name, _message.footer.size, _message.header);
                 break;
             case CREATE_REMOTE:
-                std::cout << "REMOTE: " << _message.name << " " << inet_ntoa(_message.footer.ipaddr) << std::endl;
+                std::cout << "REMOTE: " << _message.name << " " << inet_ntoa(_message.footer.ipaddr) << " " << ((_message.header >> 8) & 0b00001111) << std::endl;
+                createRemoteBuffer(_message.name, _message.footer.ipaddr, _message.header);
                 break;
             case DISCONNECT_LOCAL:
                 std::cout << "REMOVE LOCAL LISTENER: " << _message.name << " " << (_message.header & 0b00001111) << std::endl;
@@ -60,6 +66,7 @@ void dsm::Server::start() {
 
         //this is just for convenience while testing
         if (strcmp(_message.name, "end") == 0) {
+            std::this_thread::sleep_for(std::chrono::seconds(10));
             _isRunning = false;
             break;
         }
@@ -68,7 +75,9 @@ void dsm::Server::start() {
 }
 
 
-void dsm::Server::allocateLocalBuffer(std::string name, uint16_t size) {
+void dsm::Server::createLocalBuffer(std::string name, uint16_t size, uint16_t header) {
+    uint8_t clientID = header & 0b00001111;
+    _localBufferLocalListeners[_message.name].insert(clientID);
     if (_createdLocalBuffers.find(name) != _createdLocalBuffers.end()) {
         return;
     }
@@ -80,6 +89,12 @@ void dsm::Server::allocateLocalBuffer(std::string name, uint16_t size) {
     _createdLocalBuffers.insert(name);
     scoped_lock<interprocess_upgradable_mutex> lock(*_localBufferMapLock);
     _localBufferMap->insert(std::make_pair(name, std::make_tuple(handle, size, mutex)));
+}
+
+void dsm::Server::createRemoteBuffer(std::string name, struct in_addr addr, uint16_t header) {
+    std::string ipaddr = inet_ntoa(addr);
+    uint8_t portOffset = (header >> 8) & 0b00001111;
+    _remoteBuffersToCreate.insert(std::make_pair(name, new ip::udp::endpoint(ip::address::from_string(name), BASE_PORT+portOffset)));
 }
 
 void dsm::Server::removeLocalBuffer(std::string name) {
@@ -97,6 +112,9 @@ void dsm::Server::removeLocalBuffer(std::string name) {
 void dsm::Server::senderThreadFunction() {
     _isRunning = true;
     while(_isRunning) {
+        for (auto const &i : _remoteBuffersToCreate) {
+            _senderSocket->send_to(buffer(i.first, i.first.length()), *(i.second));
+        }
         //go through list of remotes that we want
         //construct and send packets to each of them
         //go through list of local buffers -> create packet for each
@@ -109,9 +127,14 @@ void dsm::Server::senderThreadFunction() {
     }
 }
 
-void dsm::Server::receieverThreadFunction() {
+void dsm::Server::receiverThreadFunction() {
     _isRunning = true;
     while(_isRunning) {
+        boost::system::error_code err;
+        ip::udp::endpoint remoteEndpoint;
+        _receiverSocket->receive_from(buffer(_receiveBuffer), remoteEndpoint, 0, err);
+
+        std::cout << _receiveBuffer.data() << std::endl;
         //block till we get a packet
         //if request
         //  check if we have the buffer, send ACK with buffer info if so

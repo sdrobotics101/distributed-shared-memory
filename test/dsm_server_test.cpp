@@ -10,6 +10,8 @@ int main(int argc, char** argv) {
         name = "server";
     }
     dsm::Server _server(name, 0);
+    dsm::Server _server2("server2", 1);
+    _server2.start();
     _server.start();
     std::cout << "Done" << std::endl;
 }

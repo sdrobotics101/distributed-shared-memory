@@ -21,7 +21,7 @@ bool dsm::Client::registerLocalBuffer(std::string name, uint16_t length) {
     return true;
 }
 
-bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr) {
+bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uint8_t portOffset) {
     if (name.length() > 26) {
         return false;
     }
@@ -32,6 +32,10 @@ bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr) {
 
     _message.header = _clientID;
     _message.header |= (CREATE_REMOTE << 4);
+
+    portOffset &= 0b00001111;
+    _message.header |= (portOffset << 8);
+
     std::strcpy(_message.name, name.c_str());
 
     _messageQueue.send(&_message, MESSAGE_SIZE, 0);

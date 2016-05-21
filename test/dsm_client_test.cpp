@@ -9,21 +9,8 @@ int main(int argc, char** argv) {
     } else {
         name = "server";
     }
-    dsm::Client _client(name, 1);
-    dsm::Client _client2(name, 2);
-    _client.registerLocalBuffer("name0", 18);
-    _client.registerLocalBuffer("name0", 17);
-    _client.registerLocalBuffer("name1", 20);
-    _client.registerLocalBuffer("name1", 22);
-    _client.registerRemoteBuffer("remote0", "192.168.1.1");
-    _client.registerRemoteBuffer("remote1", "hello");
-
-    _client2.registerLocalBuffer("name1", 20);
-    _client.disconnectFromBuffer("name1");
-    _client2.disconnectFromBuffer("name1");
-
-
-
+    dsm::Client _client(name, 0);
+    _client.registerRemoteBuffer("remote0", "127.0.0.1", 1);
 
     _client.registerLocalBuffer("end", 30);
     std::cout << "Done" << std::endl;
