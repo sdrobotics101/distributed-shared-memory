@@ -5,6 +5,7 @@
 #include <tuple>
 #include <cstdint>
 #include <netinet/in.h>
+#include <functional>
 
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/containers/map.hpp>
@@ -14,17 +15,24 @@
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/interprocess/sync/sharable_lock.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
+#include <boost/unordered_map.hpp>
+#include <boost/functional/hash.hpp>
 
 #define SEGMENT_SIZE 65536
 #define MAX_NUM_MESSAGES 10
 #define MESSAGE_SIZE 32
+#define INITIAL_NUM_BUCKETS 10
+
+#define CREATE_LOCAL 0
+#define CREATE_REMOTE 1
+#define DISCONNECT_LOCAL 2
 
 using namespace boost::interprocess;
 
 typedef std::tuple<managed_shared_memory::handle_t, std::uint16_t, offset_ptr<interprocess_upgradable_mutex>> Buffer;
 typedef std::pair<const std::string, Buffer> MappedBuffer;
 typedef allocator<MappedBuffer, managed_shared_memory::segment_manager> BufferAllocator;
-typedef map<std::string, Buffer, std::less<std::string>, BufferAllocator> BufferMap;
+typedef boost::unordered_map<std::string, Buffer, boost::hash<std::string>, std::equal_to<std::string>, BufferAllocator> BufferMap;
 
 namespace dsm {
     class Base {

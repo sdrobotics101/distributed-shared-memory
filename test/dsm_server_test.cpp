@@ -9,6 +9,7 @@ int main(int argc, char** argv) {
     } else {
         name = "server";
     }
-    dsm::Server _server(name, 8888);
+    dsm::Server _server(name, 0);
+    _server.start();
     std::cout << "Done" << std::endl;
 }
