@@ -17,6 +17,7 @@
 #include <boost/interprocess/ipc/message_queue.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/functional/hash.hpp>
+#include <boost/scoped_ptr.hpp>
 
 #define SEGMENT_SIZE 65536
 #define MAX_NUM_MESSAGES 10

@@ -1,17 +1,18 @@
 #include <iostream>
+#include <csignal>
+
 #include "../src/Server/DSMServer.h"
 
-int main(int argc, char** argv) {
+dsm::Server _server("server", 0, "0.0.0.0");
+
+void signalHandler(int signum) {
+    std::cout << "got signal: " << signum << std::endl;
+    _server.stop();
+}
+
+int main() {
     std::cout << "Starting" << std::endl;
-    std::string name;
-    if (argc > 1) {
-        name = argv[1];
-    } else {
-        name = "server";
-    }
-    dsm::Server _server(name, 0);
-    dsm::Server _server2("server2", 1);
-    _server2.start();
+    std::signal(SIGINT, signalHandler);
     _server.start();
     std::cout << "Done" << std::endl;
 }
