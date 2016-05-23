@@ -56,3 +56,16 @@ bool dsm::Client::disconnectFromLocalBuffer(std::string name) {
     _messageQueue.send(&_message, MESSAGE_SIZE, 0);
     return true;
 }
+
+void dsm::Client::setLocalBufferContents(std::string name, const void* data) {
+    sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    try {
+        Buffer buf = _localBufferMap->at(name);
+        scoped_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
+        void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
+        uint16_t len = std::get<1>(buf);
+        memcpy(ptr, data, len);
+    } catch (boost::exception const& e) {
+        std::cout << "NO BUFFER FOUND" << std::endl;
+    }
+}
