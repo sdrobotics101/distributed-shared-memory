@@ -62,17 +62,17 @@ void dsm::Server::start() {
             break;
         }
 
-        switch((_message.header & 0b11110000) >> 4) {
+        switch((_message.header & 0xF0) >> 4) {
             case CREATE_LOCAL:
-                std::cout << "LOCAL: " << _message.name << " " << _message.footer.size << " " << (_message.header & 0b00001111) << std::endl;
+                std::cout << "LOCAL: " << _message.name << " " << _message.footer.size << " " << (_message.header & 0x0F) << std::endl;
                 createLocalBuffer(_message.name, _message.footer.size, _message.header);
                 break;
             case CREATE_REMOTE:
-                std::cout << "REMOTE: " << _message.name << " " << inet_ntoa(_message.footer.ipaddr) << " " << ((_message.header >> 8) & 0b00001111) << std::endl;
+                std::cout << "REMOTE: " << _message.name << " " << inet_ntoa(_message.footer.ipaddr) << " " << ((_message.header >> 8) & 0x0F) << std::endl;
                 createRemoteBuffer(_message.name, _message.footer.ipaddr, _message.header);
                 break;
             case DISCONNECT_LOCAL:
-                std::cout << "REMOVE LOCAL LISTENER: " << _message.name << " " << (_message.header & 0b00001111) << std::endl;
+                std::cout << "REMOVE LOCAL LISTENER: " << _message.name << " " << (_message.header & 0x0F) << std::endl;
                 disconnectLocal(_message.name, _message.header);
                 break;
             default:
@@ -92,7 +92,7 @@ void dsm::Server::stop() {
 }
 
 void dsm::Server::createLocalBuffer(std::string name, uint16_t size, uint16_t header) {
-    uint8_t clientID = header & 0b00001111;
+    uint8_t clientID = header & 0x0F;
     _localBufferLocalListeners[_message.name].insert(clientID);
     if (_createdLocalBuffers.find(name) != _createdLocalBuffers.end()) {
         return;
@@ -114,7 +114,7 @@ void dsm::Server::createLocalBuffer(std::string name, uint16_t size, uint16_t he
 
 void dsm::Server::createRemoteBuffer(std::string name, struct in_addr addr, uint16_t header) {
     std::string ipaddr = inet_ntoa(addr);
-    uint8_t portOffset = (header >> 8) & 0b00001111;
+    uint8_t portOffset = (header >> 8) & 0x0F;
 
     std::cout << "ENTER CREATE REMOTE" << std::endl;
     boost::unique_lock<boost::shared_mutex> lock(_remoteBuffersToCreateMutex);
@@ -123,7 +123,7 @@ void dsm::Server::createRemoteBuffer(std::string name, struct in_addr addr, uint
 }
 
 void dsm::Server::disconnectLocal(std::string name, uint16_t header) {
-    _localBufferLocalListeners[name].erase(header & 0b00001111);
+    _localBufferLocalListeners[name].erase(header & 0x0F);
     if (_localBufferLocalListeners[name].empty()) {
         std::cout << "REMOVING LOCAL BUFFER " << name << std::endl;
         removeLocalBuffer(name);
@@ -170,7 +170,7 @@ void dsm::Server::senderThreadFunction() {
                 std::cout << "ACKLEN: " << len << std::endl;
                 boost::array<char, 30> sendBuffer;
                 sendBuffer[0] = _portOffset;
-                sendBuffer[0] |= 0b10000000;
+                sendBuffer[0] |= 0x80;
                 sendBuffer[1] = (uint8_t)i.first.length();
                 memcpy(&sendBuffer[2], &len, 2);
                 strcpy(&sendBuffer[4], i.first.c_str());
@@ -229,8 +229,8 @@ void dsm::Server::receiverThreadFunction() {
             std::cout << "STRLEN" << (uint8_t)(_receiveBuffer[1])+0 << std::endl;
             std::cout << "BUFLEN" << buflen << std::endl;
             std::cout << "NAME" << name << std::endl;
-            std::cout << "PORTOFFSET" << (_receiveBuffer[0] & 0b1111) << std::endl;
-            remoteEndpoint.port(BASE_PORT+(_receiveBuffer[0] & 0b1111));
+            std::cout << "PORTOFFSET" << (_receiveBuffer[0] & 0x0F) << std::endl;
+            remoteEndpoint.port(BASE_PORT+(_receiveBuffer[0] & 0x0F));
             boost::unique_lock<boost::shared_mutex> lock(_remoteBuffersToCreateMutex);
             std::cout << "SIZEBEFORE" << _remoteBuffersToCreate.size() << std::endl;
             _remoteBuffersToCreate.erase(std::make_pair(name, remoteEndpoint));

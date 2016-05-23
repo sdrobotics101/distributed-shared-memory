@@ -2,7 +2,7 @@
 
 dsm::Client::Client(std::string name, uint8_t clientID) : Base(name),
                                                           _clientID(clientID) {
-    _clientID &= 0b00001111;    //only use the lower 4 bits
+    _clientID &= 0x0F;    //only use the lower 4 bits
 }
 
 dsm::Client::~Client() {}
@@ -33,7 +33,7 @@ bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uin
     _message.header = _clientID;
     _message.header |= (CREATE_REMOTE << 4);
 
-    portOffset &= 0b00001111;
+    portOffset &= 0x0F;
     _message.header |= (portOffset << 8);
 
     std::strcpy(_message.name, name.c_str());
