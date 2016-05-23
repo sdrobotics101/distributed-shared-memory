@@ -40,7 +40,8 @@ namespace dsm {
             boost::thread* _receiverThread;
 
             uint8_t _portOffset;
-            std::string _multicastAddress;
+            ip::address _multicastAddress;
+            uint8_t _multicastPortOffset;
 
             io_service* _ioService;
             ip::udp::socket* _senderSocket;
@@ -58,7 +59,12 @@ namespace dsm {
             std::unordered_map<std::string, std::set<uint8_t>> _localBufferLocalListeners;
 
             //list of remote buffers that we need an ACK for
-            std::set<std::pair<std::string, ip::udp::endpoint*>> _remoteBuffersToCreate;
+            std::set<std::pair<std::string, ip::udp::endpoint>> _remoteBuffersToCreate;
+            boost::shared_mutex _remoteBuffersToCreateMutex;
+
+            //list of remote servers to ack per buffer
+            std::unordered_map<std::string, std::set<ip::udp::endpoint>> _remoteServersToACK;
+            boost::shared_mutex _remoteServersToACKMutex;
     };
 }
 

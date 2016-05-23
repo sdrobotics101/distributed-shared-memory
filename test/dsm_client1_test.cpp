@@ -3,7 +3,7 @@
 
 int main() {
     std::cout << "Starting" << std::endl;
-    dsm::Client _client("server", 0);
-    _client.registerRemoteBuffer("remote0", "127.0.0.1", 1);
+    dsm::Client _client("server1", 0);
+    _client.registerLocalBuffer("remote0", 17);
     std::cout << "Done" << std::endl;
 }

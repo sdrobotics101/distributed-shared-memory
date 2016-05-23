@@ -24,19 +24,35 @@ include_directories("${PROJECT_SOURCE_DIR}/src/Client")
 file(GLOB CLIENT_SOURCES "${PROJECT_SOURCE_DIR}/src/Client/*.cpp")
 
 # server test sources
-set(PROJECT_SERVER_TEST_NAME ${PROJECT_NAME_STR}_server_test)
-file(GLOB SERVER_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*server*.cpp")
+set(PROJECT_SERVER0_TEST_NAME ${PROJECT_NAME_STR}_server0_test)
+file(GLOB SERVER0_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*server0*.cpp")
+
+set(PROJECT_SERVER1_TEST_NAME ${PROJECT_NAME_STR}_server1_test)
+file(GLOB SERVER1_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*server1*.cpp")
 
 # client test sources
-set(PROJECT_CLIENT_TEST_NAME ${PROJECT_NAME_STR}_client_test)
-file(GLOB CLIENT_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*client*.cpp")
+set(PROJECT_CLIENT0_TEST_NAME ${PROJECT_NAME_STR}_client0_test)
+file(GLOB CLIENT0_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*client0*.cpp")
 
-# server test target
-add_executable(${PROJECT_SERVER_TEST_NAME} ${SHARED_SOURCES} ${SERVER_SOURCES} ${SERVER_TEST_SOURCES})
-target_link_libraries(${PROJECT_SERVER_TEST_NAME} ${Boost_LIBRARIES})
+set(PROJECT_CLIENT1_TEST_NAME ${PROJECT_NAME_STR}_client1_test)
+file(GLOB CLIENT1_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*client1*.cpp")
+
+# server0 test target
+add_executable(${PROJECT_SERVER0_TEST_NAME} ${SHARED_SOURCES} ${SERVER_SOURCES} ${SERVER0_TEST_SOURCES})
+target_link_libraries(${PROJECT_SERVER0_TEST_NAME} ${Boost_LIBRARIES})
 # target_compile_definitions(${PROJECT_TEST_NAME})
 
-# client test target
-add_executable(${PROJECT_CLIENT_TEST_NAME} ${SHARED_SOURCES} ${CLIENT_SOURCES} ${CLIENT_TEST_SOURCES})
-target_link_libraries(${PROJECT_CLIENT_TEST_NAME} ${Boost_LIBRARIES})
+# server1 test target
+add_executable(${PROJECT_SERVER1_TEST_NAME} ${SHARED_SOURCES} ${SERVER_SOURCES} ${SERVER1_TEST_SOURCES})
+target_link_libraries(${PROJECT_SERVER1_TEST_NAME} ${Boost_LIBRARIES})
+# target_compile_definitions(${PROJECT_TEST_NAME})
+
+# client0 test target
+add_executable(${PROJECT_CLIENT0_TEST_NAME} ${SHARED_SOURCES} ${CLIENT_SOURCES} ${CLIENT0_TEST_SOURCES})
+target_link_libraries(${PROJECT_CLIENT0_TEST_NAME} ${Boost_LIBRARIES})
+# target_compile_definitions(${PROJECT_TEST_NAME})
+
+# client1 test target
+add_executable(${PROJECT_CLIENT1_TEST_NAME} ${SHARED_SOURCES} ${CLIENT_SOURCES} ${CLIENT1_TEST_SOURCES})
+target_link_libraries(${PROJECT_CLIENT1_TEST_NAME} ${Boost_LIBRARIES})
 # target_compile_definitions(${PROJECT_TEST_NAME})

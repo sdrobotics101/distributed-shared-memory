@@ -43,7 +43,7 @@ bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uin
 }
 
 
-bool dsm::Client::disconnectFromBuffer(std::string name) {
+bool dsm::Client::disconnectFromLocalBuffer(std::string name) {
     if (name.length() > 26) {
         return false;
     }
