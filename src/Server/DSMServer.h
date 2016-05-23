@@ -43,6 +43,7 @@ namespace dsm {
 
             void processRequest(ip::udp::endpoint remoteEndpoint);
             void processACK(ip::udp::endpoint remoteEndpoint);
+            void processData(const boost::system::error_code &error, size_t bytesReceived, std::string name, ip::udp::endpoint remoteEndpoint);
 
             void senderThreadFunction();
             void receiverThreadFunction();
@@ -60,11 +61,15 @@ namespace dsm {
             ip::udp::socket* _receiverSocket;
             boost::array<char, 256> _receiveBuffer;
 
+            std::unordered_map<std::string, boost::array<char, 256>> _remoteReceiveBuffers;
+
             //sorted sets of names of created local and remote buffers, so two with the same name aren't created
+            //TODO need locks for these two
             std::set<std::string> _createdLocalBuffers;
             std::set<std::string> _createdRemoteBuffers;
 
             //map from local buffer name to multicast endpoint of listeners
+            //TODO this really only needs to store the port, could create endpoints on the fly
             std::unordered_map<std::string, ip::udp::endpoint> _localBufferMulticastAddresses;
             boost::shared_mutex _localBufferMulticastAddressesMutex;
 
@@ -78,7 +83,7 @@ namespace dsm {
             std::set<std::pair<std::string, ip::udp::endpoint>> _remoteBuffersToCreate;
             boost::shared_mutex _remoteBuffersToCreateMutex;
 
-            //list of remote servers to ack per buffer
+            //list of remote servers to ACK per buffer
             std::unordered_map<std::string, std::set<ip::udp::endpoint>> _remoteServersToACK;
             boost::shared_mutex _remoteServersToACKMutex;
     };
