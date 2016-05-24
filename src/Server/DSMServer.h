@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstdio>
 #include <set>
+#include <vector>
 #include <unordered_map>
 #include <atomic>
 
@@ -61,6 +62,7 @@ namespace dsm {
             ip::udp::socket* _receiverSocket;
             boost::array<char, 256> _receiveBuffer;
 
+            std::vector<ip::udp::socket*> _sockets;
             std::unordered_map<std::string, boost::array<char, 256>> _remoteReceiveBuffers;
 
             //sorted sets of names of created local and remote buffers, so two with the same name aren't created
@@ -80,8 +82,8 @@ namespace dsm {
             std::unordered_map<std::string, std::set<uint8_t>> _remoteBufferLocalListeners;
 
             //list of remote buffers that we need an ACK for
-            std::set<std::pair<std::string, ip::udp::endpoint>> _remoteBuffersToCreate;
-            boost::shared_mutex _remoteBuffersToCreateMutex;
+            std::set<std::pair<std::string, ip::udp::endpoint>> _remoteBuffersToFetch;
+            boost::shared_mutex _remoteBuffersToFetchMutex;
 
             //list of remote servers to ACK per buffer
             std::unordered_map<std::string, std::set<ip::udp::endpoint>> _remoteServersToACK;

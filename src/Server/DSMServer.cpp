@@ -31,6 +31,7 @@ dsm::Server::~Server() {
 
     /* clean up network */
     _isRunning = false;
+    _ioService->stop();
     _senderThread->join();
     _receiverThread->join();
     delete _senderThread;
@@ -38,6 +39,10 @@ dsm::Server::~Server() {
 
     delete _senderSocket;
     delete _receiverSocket;
+    for (auto &i : _sockets) {
+        delete i;
+    }
+
     delete _ioService;
 
     message_queue::remove((_name+"_queue").c_str());
@@ -137,8 +142,8 @@ void dsm::Server::fetchRemoteBuffer(std::string name, struct in_addr addr, uint1
         return;
     }
 
-    boost::unique_lock<boost::shared_mutex> lock(_remoteBuffersToCreateMutex);
-    _remoteBuffersToCreate.insert(std::make_pair(name, ip::udp::endpoint(ip::address::from_string(ipaddr), BASE_PORT+portOffset)));
+    boost::unique_lock<boost::shared_mutex> lock(_remoteBuffersToFetchMutex);
+    _remoteBuffersToFetch.insert(std::make_pair(name, ip::udp::endpoint(ip::address::from_string(ipaddr), BASE_PORT+portOffset)));
 }
 
 void dsm::Server::disconnectLocal(std::string name, uint16_t header) {
@@ -188,8 +193,8 @@ void dsm::Server::removeRemoteBuffer(std::string name, std::string ipaddr) {
 
 void dsm::Server::sendRequests() {
     //TODO could lock mutex, get values, then unlock
-    boost::shared_lock<boost::shared_mutex> lock(_remoteBuffersToCreateMutex);
-    for (auto const &i : _remoteBuffersToCreate) {
+    boost::shared_lock<boost::shared_mutex> lock(_remoteBuffersToFetchMutex);
+    for (auto const &i : _remoteBuffersToFetch) {
         std::cout << i.first << std::endl;
         boost::array<char, 28> sendBuffer;
         sendBuffer[0] = _portOffset;
@@ -208,11 +213,11 @@ void dsm::Server::sendACKs() {
             sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
             len = std::get<1>((*_localBufferMap)[i.first]);
         }
-        unsigned long multicastAddress;
+        uint32_t multicastAddress;
         uint16_t multicastPort;
         {
             boost::shared_lock<boost::shared_mutex> multicastLock(_localBufferMulticastAddressesMutex);
-            multicastAddress = ntohl(_localBufferMulticastAddresses[i.first].address().to_v4().to_ulong());
+            multicastAddress = _localBufferMulticastAddresses[i.first].address().to_v4().to_ulong();
             multicastPort = _localBufferMulticastAddresses[i.first].port();
         }
         std::cout << "ACKLEN: " << len << std::endl;
@@ -267,15 +272,53 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint) {
     std::string name(&_receiveBuffer[10], _receiveBuffer[1]);
     {
         //check if <name, addr, port> exists in remotes to create
-        //delete if true and continue, else return
+        remoteEndpoint.port(BASE_PORT+(_receiveBuffer[0] & 0x0F));
+        std::cout << "ACK NAME " << name << " " << remoteEndpoint.address().to_string() << " " << remoteEndpoint.port() << std::endl;
+        if (_remoteBuffersToFetch.find(std::make_pair(name, remoteEndpoint)) == _remoteBuffersToFetch.end()) {
+            std::cout << "ACK NAME DIDNT MATCH" << std::endl;
+            return;
+        }
+        //delete entry if true and continue, else return
+        boost::unique_lock<boost::shared_mutex> lock(_remoteBuffersToFetchMutex);
+        std::cout << "SIZEBEFORE" << _remoteBuffersToFetch.size() << std::endl;
+        _remoteBuffersToFetch.erase(std::make_pair(name, remoteEndpoint));
+        std::cout << "SIZEAFTER" << _remoteBuffersToFetch.size() << std::endl;
     }
     {
-        //create buffer to spec
+        uint16_t buflen;
+        memcpy(&buflen, &_receiveBuffer[2], sizeof(uint16_t));
+        createRemoteBuffer(name, remoteEndpoint.address().to_string(), buflen);
     }
     {
         //create socket and start handler
+        ip::udp::socket* sock = new ip::udp::socket(*_ioService);
+        uint32_t mcastaddr;
+        memcpy(&mcastaddr, &_receiveBuffer[4], sizeof(mcastaddr));
+        uint16_t mcastport;
+        memcpy(&mcastport, &_receiveBuffer[8], sizeof(mcastport));
+        ip::udp::endpoint listenEndpoint(ip::address_v4::from_string("0.0.0.0"), mcastport);
+        sock->open(ip::udp::v4());
+        sock->set_option(ip::udp::socket::reuse_address(true));
+        sock->bind(listenEndpoint);
+        ip::address_v4 mcastv4(mcastaddr);
+        std::cout << "ACK MULTICAST ADDR" << mcastv4.to_string() << std::endl;
+        sock->set_option(ip::multicast::join_group(ip::address_v4(mcastaddr)));
+        _remoteReceiveBuffers[remoteEndpoint.address().to_string()+name] = boost::array<char, 256>();
+        ip::udp::endpoint senderEndpoint;
+        sock->async_receive_from(buffer(_remoteReceiveBuffers[remoteEndpoint.address().to_string()+name]),
+                                 senderEndpoint,
+                                 boost::bind(&dsm::Server::processData,
+                                             this,
+                                             placeholders::error,
+                                             placeholders::bytes_transferred,
+                                             name,
+                                             remoteEndpoint));
+        _ioService->run();
+        std::cout << "SOCKET CREATED + THREAD START" << std::endl;
+        _sockets.push_back(sock);
     }
-    uint16_t buflen = (uint16_t)(_receiveBuffer[2]);
+    uint16_t buflen;
+    memcpy(&buflen, &_receiveBuffer[2], sizeof(uint16_t));
     std::cout << "NAME" << name << std::endl;
     std::cout << "BUFLEN" << buflen << std::endl;
     std::cout << "PORTOFFSET" << (_receiveBuffer[0] & 0x0F) << std::endl;
@@ -285,15 +328,12 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint) {
     uint16_t mcastport;
     memcpy(&mcastport, &_receiveBuffer[8], 2);
     std::cout << "MCASTPORT" << mcastport << std::endl;
-    remoteEndpoint.port(BASE_PORT+(_receiveBuffer[0] & 0x0F));
-    boost::unique_lock<boost::shared_mutex> lock(_remoteBuffersToCreateMutex);
-    std::cout << "SIZEBEFORE" << _remoteBuffersToCreate.size() << std::endl;
-    _remoteBuffersToCreate.erase(std::make_pair(name, remoteEndpoint));
-    std::cout << "SIZEAFTER" << _remoteBuffersToCreate.size() << std::endl;
 }
 
 void dsm::Server::processData(const boost::system::error_code &error, size_t bytesReceived, std::string name, ip::udp::endpoint remoteEndpoint) {
+    std::cout << "PROCESS DATA START" << std::endl;
     if (error) {
+        std::cout << "ERROR" << std::endl;
         return;
     }
     std::string ipaddr = remoteEndpoint.address().to_string();
@@ -301,11 +341,13 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
     Buffer buf = (*_remoteBufferMap)[ipaddr+name];
     uint16_t len = std::get<1>(buf);
     if (len != bytesReceived) {
+        std::cout << "LENGTHS NOT EQUAL" << std::endl;
         return;
     }
-    void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
-    scoped_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
-    memcpy(ptr, _remoteReceiveBuffers[ipaddr+name].data(), len);
+    std::cout << _remoteReceiveBuffers[ipaddr+name].data() << std::endl;
+    /* void* ptr = _segment.get_address_from_handle(std::get<0>(buf)); */
+    /* scoped_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get())); */
+    /* memcpy(ptr, _remoteReceiveBuffers[ipaddr+name].data(), len); */
 }
 
 void dsm::Server::senderThreadFunction() {
