@@ -57,6 +57,7 @@ void dsm::Server::start() {
     _isRunning = true;
     _senderThread = new boost::thread(boost::bind(&Server::senderThreadFunction, this));
     _receiverThread = new boost::thread(boost::bind(&Server::receiverThreadFunction, this));
+    _ioService->run();
 
     while (1) {
         unsigned int priority;
@@ -313,7 +314,10 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint) {
                                              placeholders::bytes_transferred,
                                              name,
                                              remoteEndpoint));
-        _ioService->run();
+        if (_ioService->stopped() && _isRunning.load()) {
+            _ioService->reset();
+            _ioService->run();
+        }
         std::cout << "SOCKET CREATED + THREAD START" << std::endl;
         _sockets.push_back(sock);
     }
