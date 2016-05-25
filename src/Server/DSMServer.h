@@ -12,6 +12,8 @@
 #include <boost/bind.hpp>
 #include <boost/array.hpp>
 #include <boost/thread.hpp>
+#include <boost/log/sources/logger.hpp>
+#include <boost/log/sources/record_ostream.hpp>
 
 #include "../Shared/DSMBase.h"
 
@@ -44,7 +46,7 @@ namespace dsm {
 
             void processRequest(ip::udp::endpoint remoteEndpoint);
             void processACK(ip::udp::endpoint remoteEndpoint);
-            void processData(const boost::system::error_code &error, size_t bytesReceived, std::string name, ip::udp::endpoint remoteEndpoint);
+            void processData(const boost::system::error_code &error, size_t bytesReceived, std::string name, ip::udp::endpoint remoteEndpoint, ip::udp::socket* sock, ip::udp::endpoint* sender);
 
             void senderThreadFunction();
             void receiverThreadFunction();
@@ -63,6 +65,7 @@ namespace dsm {
             boost::array<char, 256> _receiveBuffer;
 
             std::vector<ip::udp::socket*> _sockets;
+            std::vector<ip::udp::endpoint*> _senderEndpoints;
             std::unordered_map<std::string, boost::array<char, 256>> _remoteReceiveBuffers;
 
             //sorted sets of names of created local and remote buffers, so two with the same name aren't created
@@ -88,6 +91,8 @@ namespace dsm {
             //list of remote servers to ACK per buffer
             std::unordered_map<std::string, std::set<ip::udp::endpoint>> _remoteServersToACK;
             boost::shared_mutex _remoteServersToACKMutex;
+
+            boost::log::sources::logger_mt _logger;
     };
 }
 

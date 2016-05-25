@@ -8,8 +8,9 @@ project(${PROJECT_NAME_STR})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -std=c++11")
 
-find_package(Boost REQUIRED system thread)
+find_package(Boost REQUIRED system thread log)
 include_directories(SYSTEM ${Boost_INCLUDE_DIR})
+ADD_DEFINITIONS(-DBOOST_LOG_DYN_LINK)
 
 # shared sources
 include_directories("${PROJECT_SOURCE_DIR}/src/Shared")
