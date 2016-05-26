@@ -57,6 +57,19 @@ bool dsm::Client::disconnectFromLocalBuffer(std::string name) {
     return true;
 }
 
+void dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, void* data) {
+    sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
+    try {
+        Buffer buf = _remoteBufferMap->at(ipaddr+name);
+        sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
+        void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
+        uint16_t len = std::get<1>(buf);
+        memcpy(data, ptr, len);
+    } catch (boost::exception const& e) {
+        std::cout << "NO BUFFER FOUND" << std::endl;
+    }
+}
+
 void dsm::Client::setLocalBufferContents(std::string name, const void* data) {
     sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
     try {

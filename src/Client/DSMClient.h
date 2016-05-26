@@ -20,7 +20,7 @@ namespace dsm {
 
             bool disconnectFromLocalBuffer(std::string name);
 
-            /* void getRemoteBufferContents(std::string name, Packet packet); */
+            void getRemoteBufferContents(std::string name, std::string ipaddr, void* data);
             void setLocalBufferContents(std::string name, const void* data);
         private:
             uint8_t _clientID;

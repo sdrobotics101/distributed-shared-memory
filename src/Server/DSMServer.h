@@ -50,18 +50,22 @@ namespace dsm {
 
             void senderThreadFunction();
             void receiverThreadFunction();
+            void handlerThreadFunction();
             std::atomic<bool> _isRunning;
             boost::thread* _senderThread;
             boost::thread* _receiverThread;
+            boost::thread* _handlerThread;
 
             uint8_t _portOffset;
             ip::address _multicastAddress;
             uint16_t _multicastBasePort;
             uint8_t _multicastPortOffset;
 
-            io_service* _ioService;
-            ip::udp::socket* _senderSocket;
-            ip::udp::socket* _receiverSocket;
+            io_service _ioService;
+            io_service::work _work;
+            ip::udp::socket _senderSocket;
+            ip::udp::socket _receiverSocket;
+            ip::udp::endpoint _senderEndpoint;
             boost::array<char, 256> _receiveBuffer;
 
             std::vector<ip::udp::socket*> _sockets;
