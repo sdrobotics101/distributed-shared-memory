@@ -30,7 +30,7 @@ namespace dsm {
             void start();
             void stop();
         private:
-            void createLocalBuffer(std::string name, uint16_t size, uint16_t header);
+            void createLocalBuffer(std::string name, uint16_t size, uint16_t header, bool localOnly);
             void createRemoteBuffer(std::string name, std::string ipaddr, uint16_t size);
             void fetchRemoteBuffer(std::string name, struct in_addr addr, uint16_t header);
 
@@ -75,10 +75,13 @@ namespace dsm {
             //sorted sets of names of created local and remote buffers, so two with the same name aren't created
             //TODO need locks for these two
             std::set<std::string> _createdLocalBuffers;
+            boost::shared_mutex _createdLocalBuffersMutex;
+
             std::set<std::string> _createdRemoteBuffers;
+            boost::shared_mutex _createdRemoteBuffersMutex;
 
             //map from local buffer name to multicast endpoint of listeners
-            //TODO this really only needs to store the port, could create endpoints on the fly
+            //TODO? this really only needs to store the port, could create endpoints on the fly
             std::unordered_map<std::string, ip::udp::endpoint> _localBufferMulticastAddresses;
             boost::shared_mutex _localBufferMulticastAddressesMutex;
 

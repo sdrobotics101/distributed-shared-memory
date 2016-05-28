@@ -15,13 +15,14 @@ namespace dsm {
             Client(std::string name, uint8_t clientID);
             virtual ~Client();
 
-            bool registerLocalBuffer(std::string name, uint16_t length);
+            bool registerLocalBuffer(std::string name, uint16_t length, bool localOnly);
             bool registerRemoteBuffer(std::string name, std::string ipaddr, uint8_t portOffset);
 
             bool disconnectFromLocalBuffer(std::string name);
 
-            void getRemoteBufferContents(std::string name, std::string ipaddr, void* data);
-            void setLocalBufferContents(std::string name, const void* data);
+            bool getRemoteBufferContents(std::string name, std::string ipaddr, void* data);
+            bool getLocalBufferContents(std::string name, void* data);
+            bool setLocalBufferContents(std::string name, const void* data);
         private:
             uint8_t _clientID;
     };

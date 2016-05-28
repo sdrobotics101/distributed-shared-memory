@@ -7,13 +7,19 @@ dsm::Client::Client(std::string name, uint8_t clientID) : Base(name),
 
 dsm::Client::~Client() {}
 
-bool dsm::Client::registerLocalBuffer(std::string name, uint16_t length) {
+bool dsm::Client::registerLocalBuffer(std::string name, uint16_t length, bool localOnly) {
+    if (length < 1 || length > MAX_BUFFER_SIZE) {
+        return false;
+    }
     if (name.length() > 26) {
         return false;
     }
     _message.reset();
     _message.header = _clientID;
-    //message type is 0000
+    if (localOnly) {
+        _message.header |= (CREATE_LOCALONLY << 4);
+    }
+    //message type is 0000 otherwise
     std::strcpy(_message.name, name.c_str());
     _message.footer.size = length;
 
@@ -22,6 +28,9 @@ bool dsm::Client::registerLocalBuffer(std::string name, uint16_t length) {
 }
 
 bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uint8_t portOffset) {
+    if (portOffset < 0 || portOffset > 15) {
+        return false;
+    }
     if (name.length() > 26) {
         return false;
     }
@@ -32,8 +41,6 @@ bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uin
 
     _message.header = _clientID;
     _message.header |= (CREATE_REMOTE << 4);
-
-    portOffset &= 0x0F;
     _message.header |= (portOffset << 8);
 
     std::strcpy(_message.name, name.c_str());
@@ -57,7 +64,7 @@ bool dsm::Client::disconnectFromLocalBuffer(std::string name) {
     return true;
 }
 
-void dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, void* data) {
+bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, void* data) {
     sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
     try {
         Buffer buf = _remoteBufferMap->at(ipaddr+name);
@@ -65,12 +72,27 @@ void dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, 
         void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
         uint16_t len = std::get<1>(buf);
         memcpy(data, ptr, len);
+        return true;
     } catch (boost::exception const& e) {
-        std::cout << "NO BUFFER FOUND" << std::endl;
+        return false;
     }
 }
 
-void dsm::Client::setLocalBufferContents(std::string name, const void* data) {
+bool dsm::Client::getLocalBufferContents(std::string name, void* data) {
+    sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    try {
+        Buffer buf = _localBufferMap->at(name);
+        sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
+        void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
+        uint16_t len = std::get<1>(buf);
+        memcpy(data, ptr, len);
+        return true;
+    } catch (boost::exception const& e) {
+        return false;
+    }
+}
+
+bool dsm::Client::setLocalBufferContents(std::string name, const void* data) {
     sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
     try {
         Buffer buf = _localBufferMap->at(name);
@@ -78,7 +100,8 @@ void dsm::Client::setLocalBufferContents(std::string name, const void* data) {
         void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
         uint16_t len = std::get<1>(buf);
         memcpy(ptr, data, len);
+        return true;
     } catch (boost::exception const& e) {
-        std::cout << "NO BUFFER FOUND" << std::endl;
+        return false;
     }
 }

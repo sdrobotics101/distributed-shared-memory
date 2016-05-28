@@ -11,8 +11,9 @@ int main() {
     /* word.resize(4); */
     /* word = ""; */
     while (strcmp(data, "kill") != 0) {
-        _client.getRemoteBufferContents("remote0", "127.0.0.1", data);
-        std::cout << "WORD: " << data << std::endl;
+        if (_client.getRemoteBufferContents("remote0", "127.0.0.1", data)) {
+            std::cout << "WORD: " << data << std::endl;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }

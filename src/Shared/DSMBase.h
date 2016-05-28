@@ -20,13 +20,18 @@
 #include <boost/scoped_ptr.hpp>
 
 #define SEGMENT_SIZE 65536
+#define MAX_BUFFER_SIZE 1024
+
 #define MAX_NUM_MESSAGES 10
 #define MESSAGE_SIZE 32
 #define INITIAL_NUM_BUCKETS 10
 
+//message type codes
 #define CREATE_LOCAL 0
 #define CREATE_REMOTE 1
-#define DISCONNECT_LOCAL 2
+#define CREATE_LOCALONLY 2
+#define DISCONNECT_LOCAL 3
+#define DISCONNECT_REMOTE 4
 
 using namespace boost::interprocess;
 
