@@ -11,7 +11,7 @@ void signalHandler(int signum) {
 
 int main() {
     std::signal(SIGINT, signalHandler);
-    _server = new dsm::Server("server0", 0, "239.255.0.1", 30000);
+    _server = new dsm::Server(0);
     _server->start();
     delete _server;
 }

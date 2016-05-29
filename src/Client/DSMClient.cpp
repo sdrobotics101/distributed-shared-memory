@@ -1,6 +1,6 @@
 #include "DSMClient.h"
 
-dsm::Client::Client(std::string name, uint8_t clientID) : Base(name),
+dsm::Client::Client(uint8_t serverID, uint8_t clientID) : Base("server"+std::to_string(serverID)),
                                                           _clientID(clientID) {
     _clientID &= 0x0F;    //only use the lower 4 bits
 }

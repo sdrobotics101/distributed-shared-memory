@@ -24,7 +24,7 @@ using namespace boost::asio;
 namespace dsm {
     class Server : public Base {
         public:
-            Server(std::string name, uint8_t portOffset, std::string multicastAddress, uint16_t multicastBasePort);
+            Server(uint8_t portOffset);
             virtual ~Server();
 
             void start();

@@ -3,7 +3,7 @@
 
 #include "../src/Server/DSMServer.h"
 
-dsm::Server _server("server1", 1, "239.255.0.2", 40000);
+dsm::Server _server(1);
 
 void signalHandler(int signum) {
     _server.stop();

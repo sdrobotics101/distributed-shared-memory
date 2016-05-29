@@ -1,11 +1,11 @@
 #include "DSMServer.h"
 
-dsm::Server::Server(std::string name, uint8_t portOffset, std::string multicastAddress, uint16_t multicastBasePort) :
-    Base(name),
+dsm::Server::Server(uint8_t portOffset) :
+    Base("server"+std::to_string(portOffset)),
     _isRunning(false),
     _portOffset(portOffset),
-    _multicastAddress(ip::address::from_string(multicastAddress)),
-    _multicastBasePort(multicastBasePort),
+    _multicastAddress(ip::address::from_string("239.255.0."+std::to_string(portOffset+1))),
+    _multicastBasePort(30000+(portOffset*1024)),
     _multicastPortOffset(0),
     _work(_ioService),
     _senderSocket(_ioService, ip::udp::v4()),
