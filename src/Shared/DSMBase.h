@@ -32,6 +32,7 @@
 #define CREATE_LOCALONLY 2
 #define DISCONNECT_LOCAL 3
 #define DISCONNECT_REMOTE 4
+#define DISCONNECT_CLIENT 5
 
 using namespace boost::interprocess;
 

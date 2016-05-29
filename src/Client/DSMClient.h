@@ -19,6 +19,7 @@ namespace dsm {
             bool registerRemoteBuffer(std::string name, std::string ipaddr, uint8_t portOffset);
 
             bool disconnectFromLocalBuffer(std::string name);
+            bool disconnectFromRemoteBuffer(std::string name, std::string ipaddr);
 
             bool getRemoteBufferContents(std::string name, std::string ipaddr, void* data);
             bool getLocalBufferContents(std::string name, void* data);

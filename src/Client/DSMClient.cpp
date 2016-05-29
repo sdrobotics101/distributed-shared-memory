@@ -5,7 +5,12 @@ dsm::Client::Client(uint8_t serverID, uint8_t clientID) : Base("server"+std::to_
     _clientID &= 0x0F;    //only use the lower 4 bits
 }
 
-dsm::Client::~Client() {}
+dsm::Client::~Client() {
+    _message.reset();
+    _message.header = _clientID;
+    _message.header |= (DISCONNECT_CLIENT << 4);
+    _messageQueue.send(&_message, MESSAGE_SIZE, 0);
+}
 
 bool dsm::Client::registerLocalBuffer(std::string name, uint16_t length, bool localOnly) {
     if (length < 1 || length > MAX_BUFFER_SIZE) {
@@ -58,6 +63,24 @@ bool dsm::Client::disconnectFromLocalBuffer(std::string name) {
     _message.reset();
     _message.header = _clientID;
     _message.header |= (DISCONNECT_LOCAL << 4);
+    std::strcpy(_message.name, name.c_str());
+
+    _messageQueue.send(&_message, MESSAGE_SIZE, 0);
+    return true;
+}
+
+bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipaddr) {
+    if (name.length() > 26) {
+        return false;
+    }
+
+    _message.reset();
+    if (inet_aton(ipaddr.c_str(), &_message.footer.ipaddr) == 0) {
+        return false;
+    }
+
+    _message.header = _clientID;
+    _message.header |= (DISCONNECT_REMOTE << 4);
     std::strcpy(_message.name, name.c_str());
 
     _messageQueue.send(&_message, MESSAGE_SIZE, 0);

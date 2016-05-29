@@ -12,15 +12,35 @@
 #include <boost/bind.hpp>
 #include <boost/array.hpp>
 #include <boost/thread.hpp>
-#include <boost/log/sources/logger.hpp>
+
+#include <boost/log/core.hpp>
+#include <boost/core/null_deleter.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/attributes.hpp>
+#include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/sources/record_ostream.hpp>
+#include <boost/log/sinks/sync_frontend.hpp>
+#include <boost/log/sinks/text_ostream_backend.hpp>
 
 #include "../Shared/DSMBase.h"
 
 #define REQUEST_BASE_PORT 8888
 #define MULTICAST_BASE_PORT 30000
 
+#define SENDER_DELAY 3
+
 using namespace boost::asio;
+
+enum severity_levels {
+    trace,
+    startup,
+    teardown,
+    info,
+    error,
+    debug
+};
+
+BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", severity_levels);
 
 namespace dsm {
     class Server : public Base {
@@ -37,6 +57,7 @@ namespace dsm {
 
             void disconnectLocal(std::string name, uint16_t header);
             void disconnectRemote(std::string name, struct in_addr addr, uint16_t header);
+            void disconnectClient(uint16_t header);
 
             void removeLocalBuffer(std::string name);
             void removeRemoteBuffer(std::string name, std::string ipaddr);
@@ -44,6 +65,7 @@ namespace dsm {
             void sendRequests();
             void sendACKs();
             void sendData();
+            void sendHandler(const boost::system::error_code&, std::size_t);
 
             void processRequest(ip::udp::endpoint remoteEndpoint);
             void processACK(ip::udp::endpoint remoteEndpoint);
@@ -67,7 +89,7 @@ namespace dsm {
             ip::udp::socket _senderSocket;
             ip::udp::socket _receiverSocket;
             ip::udp::endpoint _senderEndpoint;
-            boost::array<char, 256> _receiveBuffer;
+            boost::array<char, 36> _receiveBuffer;
 
             std::vector<ip::udp::socket*> _sockets;
             std::vector<ip::udp::endpoint*> _senderEndpoints;
@@ -100,7 +122,10 @@ namespace dsm {
             std::unordered_map<std::string, std::set<ip::udp::endpoint>> _remoteServersToACK;
             boost::shared_mutex _remoteServersToACKMutex;
 
-            boost::log::sources::logger_mt _logger;
+            //map from client ID to list of local and remote buffers subscribed to
+            std::unordered_map<uint8_t, std::pair<std::set<std::string>, std::set<std::pair<std::string, std::string>>>> _clientSubscriptions;
+
+            boost::log::sources::severity_logger_mt<severity_levels> _logger;
     };
 }
 
