@@ -9,9 +9,12 @@ void signalHandler(int signum) {
     _server->stop();
 }
 
-int main() {
+int main(int argc, char** argv) {
+    if (argc < 2) {
+        std::cout << "USAGE: ./Server ServerID";
+    }
+    _server = new dsm::Server(std::stoi(argv[1]));
     std::signal(SIGINT, signalHandler);
-    _server = new dsm::Server(0);
     _server->start();
     delete _server;
 }

@@ -17,7 +17,8 @@
 
 #include "../Shared/DSMBase.h"
 
-#define BASE_PORT 8888
+#define REQUEST_BASE_PORT 8888
+#define MULTICAST_BASE_PORT 30000
 
 using namespace boost::asio;
 

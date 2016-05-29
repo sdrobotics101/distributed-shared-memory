@@ -5,11 +5,11 @@ dsm::Server::Server(uint8_t portOffset) :
     _isRunning(false),
     _portOffset(portOffset),
     _multicastAddress(ip::address::from_string("239.255.0."+std::to_string(portOffset+1))),
-    _multicastBasePort(30000+(portOffset*1024)),
+    _multicastBasePort(MULTICAST_BASE_PORT+(portOffset*1024)),
     _multicastPortOffset(0),
     _work(_ioService),
     _senderSocket(_ioService, ip::udp::v4()),
-    _receiverSocket(_ioService, ip::udp::endpoint(ip::udp::v4(), BASE_PORT+_portOffset)) {}
+    _receiverSocket(_ioService, ip::udp::endpoint(ip::udp::v4(), REQUEST_BASE_PORT+_portOffset)) {}
 
 dsm::Server::~Server() {
     BOOST_LOG(_logger) << "DESTRUCTOR START";
@@ -97,7 +97,7 @@ void dsm::Server::stop() {
     BOOST_LOG(_logger) << "SERVER STOPPING";
     _isRunning = false;
     uint8_t ignorePacket = -1;
-    _senderSocket.send_to(buffer(&ignorePacket, 1), ip::udp::endpoint(ip::address::from_string("127.0.0.1"), BASE_PORT+_portOffset));
+    _senderSocket.send_to(buffer(&ignorePacket, 1), ip::udp::endpoint(ip::address::from_string("127.0.0.1"), REQUEST_BASE_PORT+_portOffset));
     _messageQueue.send(0, 0, 0);
 }
 
@@ -160,7 +160,7 @@ void dsm::Server::fetchRemoteBuffer(std::string name, struct in_addr addr, uint1
     buffersLock.unlock();
 
     boost::unique_lock<boost::shared_mutex> lock(_remoteBuffersToFetchMutex);
-    _remoteBuffersToFetch.insert(std::make_pair(name, ip::udp::endpoint(ip::address::from_string(ipaddr), BASE_PORT+portOffset)));
+    _remoteBuffersToFetch.insert(std::make_pair(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset)));
     lock.unlock();
 }
 
@@ -297,7 +297,7 @@ void dsm::Server::processRequest(ip::udp::endpoint remoteEndpoint) {
     boost::shared_lock<boost::shared_mutex> buffersLock(_createdLocalBuffersMutex);
     if (_createdLocalBuffers.find(name) != _createdLocalBuffers.end()) {
         buffersLock.unlock();
-        remoteEndpoint.port(BASE_PORT+_receiveBuffer[0]);
+        remoteEndpoint.port(REQUEST_BASE_PORT+_receiveBuffer[0]);
         boost::unique_lock<boost::shared_mutex> lock(_remoteServersToACKMutex);
         _remoteServersToACK[name].insert(remoteEndpoint);
     } else {
@@ -309,7 +309,7 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint) {
     std::string name(&_receiveBuffer[10], _receiveBuffer[1]);
     {
         //check if <name, addr, port> exists in remotes to create
-        remoteEndpoint.port(BASE_PORT+(_receiveBuffer[0] & 0x0F));
+        remoteEndpoint.port(REQUEST_BASE_PORT+(_receiveBuffer[0] & 0x0F));
         BOOST_LOG(_logger) << "RECEIVED ACK FOR " << name << " " << remoteEndpoint.address().to_string() << " " << remoteEndpoint.port();
         if (_remoteBuffersToFetch.find(std::make_pair(name, remoteEndpoint)) == _remoteBuffersToFetch.end()) {
             return;
