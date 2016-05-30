@@ -177,12 +177,10 @@ void dsm::Server::createLocalBuffer(std::string name, uint16_t size, uint16_t he
         boost::unique_lock<boost::shared_mutex> multicastLock(_localBufferMulticastAddressesMutex);
         _localBufferMulticastAddresses.insert(std::make_pair(name, ip::udp::endpoint(_multicastAddress, _multicastBasePort+(clientID * MAX_BUFFERS_PER_CLIENT)+_multicastPortOffsets[clientID])));
         _multicastPortOffsets[clientID]++;
-        multicastLock.unlock();
     }
 
     interprocess::scoped_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
     _localBufferMap->insert(std::make_pair(name, std::make_tuple(handle, size, mutex)));
-    mapLock.unlock();
 }
 
 void dsm::Server::createRemoteBuffer(std::string name, std::string ipaddr, uint16_t size) {
@@ -199,7 +197,6 @@ void dsm::Server::createRemoteBuffer(std::string name, std::string ipaddr, uint1
 
     interprocess::scoped_lock<interprocess_upgradable_mutex> lock(*_remoteBufferMapLock);
     _remoteBufferMap->insert(std::make_pair(ipaddr+name, std::make_tuple(handle, size, mutex)));
-    lock.unlock();
 }
 
 void dsm::Server::fetchRemoteBuffer(std::string name, struct in_addr addr, uint16_t header) {

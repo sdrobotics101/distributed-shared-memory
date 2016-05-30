@@ -101,7 +101,6 @@ namespace dsm {
             std::unordered_map<std::string, boost::array<char, 256>> _remoteReceiveBuffers;
 
             //sorted sets of names of created local and remote buffers, so two with the same name aren't created
-            //TODO need locks for these two
             std::set<std::string> _createdLocalBuffers;
             boost::shared_mutex _createdLocalBuffersMutex;
 
