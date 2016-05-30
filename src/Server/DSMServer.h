@@ -32,7 +32,9 @@
 
 #define SENDER_DELAY 10
 
-using namespace boost::asio;
+namespace asio = boost::asio;
+namespace ip = boost::asio::ip;
+namespace logging = boost::log;
 
 enum severity_levels {
     trace,
@@ -87,8 +89,8 @@ namespace dsm {
             uint16_t _multicastBasePort;
             uint8_t _multicastPortOffsets[MAX_CLIENTS];
 
-            io_service _ioService;
-            io_service::work _work;
+            asio::io_service _ioService;
+            asio::io_service::work _work;
             ip::udp::socket _senderSocket;
             ip::udp::socket _receiverSocket;
             ip::udp::endpoint _senderEndpoint;
@@ -128,7 +130,7 @@ namespace dsm {
             //map from client ID to list of local and remote buffers subscribed to
             std::unordered_map<uint8_t, std::pair<std::set<std::string>, std::set<std::pair<std::string, std::string>>>> _clientSubscriptions;
 
-            boost::log::sources::severity_logger_mt<severity_levels> _logger;
+            logging::sources::severity_logger_mt<severity_levels> _logger;
     };
 }
 

@@ -29,17 +29,17 @@ dsm::Server::Server(uint8_t portOffset) :
     _senderSocket(_ioService, ip::udp::v4()),
     _receiverSocket(_ioService, ip::udp::endpoint(ip::udp::v4(), REQUEST_BASE_PORT+_portOffset))
 {
-    boost::log::formatter format = boost::log::expressions::stream <<
+    logging::formatter format = logging::expressions::stream <<
         "[" << severity << "] " <<
-        boost::log::expressions::smessage;
-    boost::log::core::get()->set_filter(severity > severity_levels::trace);
+        logging::expressions::smessage;
+    logging::core::get()->set_filter(severity > severity_levels::trace);
 
-    typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_backend> text_sink;
+    typedef logging::sinks::synchronous_sink<logging::sinks::text_ostream_backend> text_sink;
     boost::shared_ptr<text_sink> sink = boost::make_shared<text_sink>();
     boost::shared_ptr<std::ostream> stream(&std::clog, boost::null_deleter());
     sink->locked_backend()->add_stream(stream);
     sink->set_formatter(format);
-    boost::log::core::get()->add_sink(sink);
+    logging::core::get()->add_sink(sink);
 
     for (int i = 0; i < MAX_CLIENTS; i++) {
         _multicastPortOffsets[i] = 0;
@@ -79,8 +79,8 @@ dsm::Server::~Server() {
         delete i;
     }
 
-    message_queue::remove((_name+"_queue").c_str());
-    shared_memory_object::remove(_name.c_str());
+    interprocess::message_queue::remove((_name+"_queue").c_str());
+    interprocess::shared_memory_object::remove(_name.c_str());
 
     BOOST_LOG_SEV(_logger, teardown) << "DESTROYED SERVER";
 }
@@ -98,7 +98,7 @@ void dsm::Server::start() {
 
     while (_isRunning.load()) {
         unsigned int priority;
-        message_queue::size_type receivedSize;
+        interprocess::message_queue::size_type receivedSize;
         _messageQueue.receive(&_message, MESSAGE_SIZE, receivedSize, priority);
 
         if (receivedSize != 32) {
@@ -143,7 +143,7 @@ void dsm::Server::stop() {
     BOOST_LOG_SEV(_logger, teardown) << "SERVER STOPPING";
     _isRunning = false;
     uint8_t ignorePacket = -1;
-    _senderSocket.send_to(buffer(&ignorePacket, 1), ip::udp::endpoint(ip::address::from_string("127.0.0.1"), REQUEST_BASE_PORT+_portOffset));
+    _senderSocket.send_to(asio::buffer(&ignorePacket, 1), ip::udp::endpoint(ip::address::from_string("127.0.0.1"), REQUEST_BASE_PORT+_portOffset));
     _messageQueue.send(0, 0, 0);
 }
 
@@ -167,11 +167,10 @@ void dsm::Server::createLocalBuffer(std::string name, uint16_t size, uint16_t he
     _localBufferLocalListeners[name].insert(clientID);
     _clientSubscriptions[clientID].first.insert(name);
 
-    scoped_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock, defer_lock);
     //TODO make these 2 allocate calls into one
     void* buf = _segment.allocate(size);
-    managed_shared_memory::handle_t handle = _segment.get_handle_from_address(buf);
-    offset_ptr<interprocess_upgradable_mutex> mutex = static_cast<interprocess_upgradable_mutex*>(_segment.allocate(sizeof(interprocess_upgradable_mutex)));
+    interprocess::managed_shared_memory::handle_t handle = _segment.get_handle_from_address(buf);
+    interprocess::offset_ptr<interprocess_upgradable_mutex> mutex = static_cast<interprocess_upgradable_mutex*>(_segment.allocate(sizeof(interprocess_upgradable_mutex)));
     new (mutex.get()) interprocess_upgradable_mutex;
 
     if (!localOnly) {
@@ -181,25 +180,24 @@ void dsm::Server::createLocalBuffer(std::string name, uint16_t size, uint16_t he
         multicastLock.unlock();
     }
 
-    mapLock.lock();
+    interprocess::scoped_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
     _localBufferMap->insert(std::make_pair(name, std::make_tuple(handle, size, mutex)));
     mapLock.unlock();
 }
 
 void dsm::Server::createRemoteBuffer(std::string name, std::string ipaddr, uint16_t size) {
     BOOST_LOG_SEV(_logger, trace) << "CREATING REMOTE BUFFER: " << ipaddr << " " << name;
-    scoped_lock<interprocess_upgradable_mutex> lock(*_remoteBufferMapLock, defer_lock);
 
     void* buf = _segment.allocate(size);
-    managed_shared_memory::handle_t handle = _segment.get_handle_from_address(buf);
-    offset_ptr<interprocess_upgradable_mutex> mutex = static_cast<interprocess_upgradable_mutex*>(_segment.allocate(sizeof(interprocess_upgradable_mutex)));
+    interprocess::managed_shared_memory::handle_t handle = _segment.get_handle_from_address(buf);
+    interprocess::offset_ptr<interprocess_upgradable_mutex> mutex = static_cast<interprocess_upgradable_mutex*>(_segment.allocate(sizeof(interprocess_upgradable_mutex)));
     new (mutex.get()) interprocess_upgradable_mutex;
 
     boost::unique_lock<boost::shared_mutex> buffersLock(_createdRemoteBuffersMutex);
     _createdRemoteBuffers.insert(ipaddr+name);
     buffersLock.unlock();
 
-    lock.lock();
+    interprocess::scoped_lock<interprocess_upgradable_mutex> lock(*_remoteBufferMapLock);
     _remoteBufferMap->insert(std::make_pair(ipaddr+name, std::make_tuple(handle, size, mutex)));
     lock.unlock();
 }
@@ -275,7 +273,7 @@ void dsm::Server::removeLocalBuffer(std::string name) {
     _localBufferMulticastAddresses.erase(name);
     multicastLock.unlock();
 
-    scoped_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::scoped_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
     Buffer buf = (*_localBufferMap)[name];
     _segment.deallocate(_segment.get_address_from_handle(std::get<0>(buf)));
     _segment.deallocate(std::get<2>(buf).get());
@@ -292,7 +290,7 @@ void dsm::Server::removeRemoteBuffer(std::string name, std::string ipaddr) {
     _createdRemoteBuffers.erase(ipaddr+name);
     buffersLock.unlock();
 
-    scoped_lock<interprocess_upgradable_mutex> lock(*_localBufferMapLock);
+    interprocess::scoped_lock<interprocess_upgradable_mutex> lock(*_localBufferMapLock);
     Buffer buf = (*_remoteBufferMap)[ipaddr+name];
     _segment.deallocate(_segment.get_address_from_handle(std::get<0>(buf)));
     _segment.deallocate(std::get<2>(buf).get());
@@ -310,19 +308,19 @@ void dsm::Server::sendRequests() {
         sendBuffer[1] = i.first.length();
         std::strcpy(&sendBuffer[2], i.first.c_str());
         /* _senderSocket.send_to(buffer(sendBuffer), i.second); */
-        _senderSocket.async_send_to(buffer(sendBuffer),
+        _senderSocket.async_send_to(asio::buffer(sendBuffer),
                                     i.second,
                                     boost::bind(&dsm::Server::sendHandler,
                                                 this,
-                                                boost::asio::placeholders::error,
-                                                boost::asio::placeholders::bytes_transferred));
+                                                asio::placeholders::error,
+                                                asio::placeholders::bytes_transferred));
     }
 }
 
 void dsm::Server::sendACKs() {
     boost::upgrade_lock<boost::shared_mutex> ackLock(_remoteServersToACKMutex);
     boost::shared_lock<boost::shared_mutex> multicastLock(_localBufferMulticastAddressesMutex);
-    sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
     for (auto &i : _remoteServersToACK) {
         //multicast lock
         uint32_t multicastAddress;
@@ -354,12 +352,12 @@ void dsm::Server::sendACKs() {
         for (auto const &j : i.second) {
             BOOST_LOG_SEV(_logger, trace) << "SENDING ACK " << i.first << " " << j.address() << " " << j.port();
             /* _senderSocket.send_to(buffer(sendBuffer), j); */
-            _senderSocket.async_send_to(buffer(sendBuffer),
+            _senderSocket.async_send_to(asio::buffer(sendBuffer),
                                         j,
                                         boost::bind(&dsm::Server::sendHandler,
                                                     this,
-                                                    boost::asio::placeholders::error,
-                                                    boost::asio::placeholders::bytes_transferred));
+                                                    asio::placeholders::error,
+                                                    asio::placeholders::bytes_transferred));
         }
     }
     mapLock.unlock();
@@ -371,20 +369,20 @@ void dsm::Server::sendACKs() {
 
 void dsm::Server::sendData() {
     boost::shared_lock<boost::shared_mutex> multicastLock(_localBufferMulticastAddressesMutex);
-    sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
     for (auto const &i : _localBufferMulticastAddresses) {
         BOOST_LOG_SEV(_logger, trace) << "SENDING DATA " << i.first << " " << i.second.address() << " " << i.second.port();
         Buffer buf = (*_localBufferMap)[i.first];
         void* data = _segment.get_address_from_handle(std::get<0>(buf));
         uint16_t len = std::get<1>(buf);
-        sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
+        interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
         /* _senderSocket.send_to(buffer(data, len), i.second); */
-        _senderSocket.async_send_to(buffer(data,len),
+        _senderSocket.async_send_to(asio::buffer(data,len),
                                     i.second,
                                     boost::bind(&dsm::Server::sendHandler,
                                                 this,
-                                                boost::asio::placeholders::error,
-                                                boost::asio::placeholders::bytes_transferred));
+                                                asio::placeholders::error,
+                                                asio::placeholders::bytes_transferred));
     }
 }
 
@@ -440,12 +438,12 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint) {
         std::string receiveBufferKey = remoteEndpoint.address().to_string()+name;
         _remoteReceiveBuffers[receiveBufferKey] = boost::array<char, 256>();
         ip::udp::endpoint *senderEndpoint = new ip::udp::endpoint();
-        sock->async_receive_from(buffer(_remoteReceiveBuffers[receiveBufferKey]),
+        sock->async_receive_from(asio::buffer(_remoteReceiveBuffers[receiveBufferKey]),
                                  *senderEndpoint,
                                  boost::bind(&dsm::Server::processData,
                                              this,
-                                             placeholders::error,
-                                             placeholders::bytes_transferred,
+                                             asio::placeholders::error,
+                                             asio::placeholders::bytes_transferred,
                                              name,
                                              remoteEndpoint,
                                              sock,
@@ -463,7 +461,7 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
         return;
     }
     std::string ipaddr = remoteEndpoint.address().to_string();
-    sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
+    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
     Buffer buf;
     try {
         buf = _remoteBufferMap->at(ipaddr+name);
@@ -479,16 +477,16 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
         return;
     }
     void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
-    scoped_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
+    interprocess::scoped_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
     memcpy(ptr, _remoteReceiveBuffers[ipaddr+name].data(), len);
     mapLock.unlock();
     dataLock.unlock();
-    sock->async_receive_from(buffer(_remoteReceiveBuffers[ipaddr+name]),
+    sock->async_receive_from(asio::buffer(_remoteReceiveBuffers[ipaddr+name]),
                              *sender,
                              boost::bind(&dsm::Server::processData,
                                          this,
-                                         placeholders::error,
-                                         placeholders::bytes_transferred,
+                                         asio::placeholders::error,
+                                         asio::placeholders::bytes_transferred,
                                          name,
                                          remoteEndpoint,
                                          sock,
@@ -512,7 +510,7 @@ void dsm::Server::receiverThreadFunction() {
     while (_isRunning.load()) {
         boost::system::error_code err;
         ip::udp::endpoint remoteEndpoint;
-        _receiverSocket.receive_from(buffer(_receiveBuffer), remoteEndpoint, 0, err);
+        _receiverSocket.receive_from(asio::buffer(_receiveBuffer), remoteEndpoint, 0, err);
 
         BOOST_LOG_SEV(_logger, trace) << "RECEIVER GOT PACKET";
         if (_receiveBuffer[0] == -1) {

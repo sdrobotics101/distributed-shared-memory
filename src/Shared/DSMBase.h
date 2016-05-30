@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <netinet/in.h>
 #include <functional>
+#include <exception>
 
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/containers/map.hpp>
@@ -34,11 +35,12 @@
 #define DISCONNECT_REMOTE 4
 #define DISCONNECT_CLIENT 5
 
-using namespace boost::interprocess;
+namespace interprocess = boost::interprocess;
+using interprocess::interprocess_upgradable_mutex;
 
-typedef std::tuple<managed_shared_memory::handle_t, std::uint16_t, offset_ptr<interprocess_upgradable_mutex>> Buffer;
+typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_upgradable_mutex>> Buffer;
 typedef std::pair<const std::string, Buffer> MappedBuffer;
-typedef allocator<MappedBuffer, managed_shared_memory::segment_manager> BufferAllocator;
+typedef interprocess::allocator<MappedBuffer, interprocess::managed_shared_memory::segment_manager> BufferAllocator;
 typedef boost::unordered_map<std::string, Buffer, boost::hash<std::string>, std::equal_to<std::string>, BufferAllocator> BufferMap;
 
 namespace dsm {
@@ -48,9 +50,9 @@ namespace dsm {
             virtual ~Base() = 0;
         protected:
             std::string _name;
-            managed_shared_memory _segment;
+            interprocess::managed_shared_memory _segment;
 
-            message_queue _messageQueue;
+            interprocess::message_queue _messageQueue;
 
             BufferMap *_localBufferMap;
             BufferMap *_remoteBufferMap;

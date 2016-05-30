@@ -1,8 +1,8 @@
 #include "DSMBase.h"
 
 dsm::Base::Base(std::string name) : _name(name),
-                                    _segment(open_or_create, _name.c_str(), SEGMENT_SIZE),
-                                    _messageQueue(open_or_create, (name+"_queue").c_str(), MAX_NUM_MESSAGES, MESSAGE_SIZE)
+                                    _segment(interprocess::open_or_create, _name.c_str(), SEGMENT_SIZE),
+                                    _messageQueue(interprocess::open_or_create, (name+"_queue").c_str(), MAX_NUM_MESSAGES, MESSAGE_SIZE)
 {
     BufferAllocator bufferAllocator(_segment.get_segment_manager());
     _localBufferMap = _segment.find_or_construct<BufferMap>("LocalBufferMap")(INITIAL_NUM_BUCKETS,
