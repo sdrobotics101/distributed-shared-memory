@@ -12,4 +12,5 @@ int main() {
         std::getline(std::cin, input);
         _client.setLocalBufferContents("remote0", input.data());
     }
+    _client.setLocalBufferContents("remote0", "kill");
 }

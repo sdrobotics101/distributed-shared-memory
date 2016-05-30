@@ -27,7 +27,10 @@
 #define REQUEST_BASE_PORT 8888
 #define MULTICAST_BASE_PORT 30000
 
-#define SENDER_DELAY 3
+#define MAX_CLIENTS 16
+#define MAX_BUFFERS_PER_CLIENT 64
+
+#define SENDER_DELAY 10
 
 using namespace boost::asio;
 
@@ -82,7 +85,7 @@ namespace dsm {
             uint8_t _portOffset;
             ip::address _multicastAddress;
             uint16_t _multicastBasePort;
-            uint8_t _multicastPortOffset;
+            uint8_t _multicastPortOffsets[MAX_CLIENTS];
 
             io_service _ioService;
             io_service::work _work;
