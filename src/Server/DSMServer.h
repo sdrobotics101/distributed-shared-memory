@@ -5,12 +5,12 @@
 #include <cstdio>
 #include <set>
 #include <vector>
-#include <unordered_map>
 #include <atomic>
 
 #include <boost/bind.hpp>
 #include <boost/array.hpp>
 #include <boost/thread.hpp>
+#include <boost/unordered_set.hpp>
 
 #include <boost/log/core.hpp>
 #include <boost/core/null_deleter.hpp>
@@ -33,6 +33,7 @@
 namespace logging = boost::log;
 
 enum severity_levels {
+    periodic,
     trace,
     startup,
     teardown,
@@ -93,20 +94,21 @@ namespace dsm {
             boost::array<char, 36> _receiveBuffer;
 
             std::vector<ip::udp::socket*> _sockets;
-            std::vector<ip::udp::endpoint*> _senderEndpoints;
-            boost::unordered_map<RemoteBufferKey, boost::array<char, 256>, boost::hash<RemoteBufferKey>, std::equal_to<RemoteBufferKey>> _remoteReceiveBuffers;
+            /* std::vector<ip::udp::endpoint*> _senderEndpoints; */
+            boost::unordered_map<RemoteBufferKey, boost::array<char, 256>> _remoteReceiveBuffers;
 
             //map from local buffer name to client IDs of listeners
             boost::unordered_map<LocalBufferKey, std::set<uint8_t>> _localBufferLocalListeners;
 
             //map from remote buffer to client IDs of local listeners
-            boost::unordered_map<RemoteBufferKey, std::set<uint8_t>, boost::hash<RemoteBufferKey>, std::equal_to<RemoteBufferKey>> _remoteBufferLocalListeners;
+            /* boost::unordered_map<RemoteBufferKey, std::set<uint8_t>, boost::hash<RemoteBufferKey>, std::equal_to<RemoteBufferKey>> _remoteBufferLocalListeners; */
+            boost::unordered_map<RemoteBufferKey, std::set<uint8_t>> _remoteBufferLocalListeners;
 
             //map from client ID to list of local and remote buffers subscribed to
-            boost::unordered_map<uint8_t, std::pair<std::set<LocalBufferKey>, std::set<RemoteBufferKey>>> _clientSubscriptions;
+            boost::unordered_map<uint8_t, std::pair<boost::unordered_set<LocalBufferKey>, boost::unordered_set<RemoteBufferKey>>> _clientSubscriptions;
 
             //list of remote buffers that we need an ACK for
-            std::set<RemoteBufferKey> _remoteBuffersToFetch;
+            boost::unordered_set<RemoteBufferKey> _remoteBuffersToFetch;
             boost::shared_mutex _remoteBuffersToFetchMutex;
 
             //list of remote servers to ACK per buffer

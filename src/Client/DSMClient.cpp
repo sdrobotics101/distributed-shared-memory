@@ -69,11 +69,13 @@ bool dsm::Client::disconnectFromLocalBuffer(std::string name) {
     return true;
 }
 
-bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipaddr) {
+bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipaddr, uint8_t portOffset) {
+    if (portOffset < 0 || portOffset > 15) {
+        return false;
+    }
     if (name.length() > 26) {
         return false;
     }
-
     _message.reset();
     if (inet_aton(ipaddr.c_str(), &_message.footer.ipaddr) == 0) {
         return false;
@@ -81,10 +83,32 @@ bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipadd
 
     _message.header = _clientID;
     _message.header |= (DISCONNECT_REMOTE << 4);
+    _message.header |= (portOffset << 8);
     std::strcpy(_message.name, name.c_str());
 
     _messageQueue.send(&_message, MESSAGE_SIZE, 0);
     return true;
+}
+
+bool dsm::Client::doesLocalExist(std::string name) {
+    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    try {
+        _localBufferMap->at(name);
+        return true;
+    } catch (std::exception const& e) {
+        return false;
+    }
+}
+
+bool dsm::Client::doesRemoteExist(std::string name, std::string ipaddr, uint8_t portOffset) {
+    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
+    try {
+        RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
+        RemoteBuffer buf = _remoteBufferMap->at(key);
+        return true;
+    } catch (std::exception const& e) {
+        return false;
+    }
 }
 
 bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t portOffset, void* data) {
