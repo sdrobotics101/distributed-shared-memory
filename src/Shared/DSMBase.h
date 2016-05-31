@@ -8,17 +8,20 @@
 #include <functional>
 #include <exception>
 
+#include <boost/asio.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/interprocess/containers/map.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/offset_ptr.hpp>
 #include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/interprocess/sync/sharable_lock.hpp>
+#include <boost/interprocess/sync/upgradable_lock.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/scoped_ptr.hpp>
+
+#include "DSMTypedefs.h"
 
 #define SEGMENT_SIZE 65536
 #define MAX_BUFFER_SIZE 1024
@@ -26,6 +29,8 @@
 #define MAX_NUM_MESSAGES 10
 #define MESSAGE_SIZE 32
 #define INITIAL_NUM_BUCKETS 10
+
+#define REQUEST_BASE_PORT 8888
 
 //message type codes
 #define CREATE_LOCAL 0
@@ -36,12 +41,8 @@
 #define DISCONNECT_CLIENT 5
 
 namespace interprocess = boost::interprocess;
-using interprocess::interprocess_upgradable_mutex;
-
-typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_upgradable_mutex>> Buffer;
-typedef std::pair<const std::string, Buffer> MappedBuffer;
-typedef interprocess::allocator<MappedBuffer, interprocess::managed_shared_memory::segment_manager> BufferAllocator;
-typedef boost::unordered_map<std::string, Buffer, boost::hash<std::string>, std::equal_to<std::string>, BufferAllocator> BufferMap;
+namespace asio = boost::asio;
+namespace ip = boost::asio::ip;
 
 namespace dsm {
     class Base {
@@ -54,8 +55,8 @@ namespace dsm {
 
             interprocess::message_queue _messageQueue;
 
-            BufferMap *_localBufferMap;
-            BufferMap *_remoteBufferMap;
+            LocalBufferMap *_localBufferMap;
+            RemoteBufferMap *_remoteBufferMap;
             interprocess_upgradable_mutex* _localBufferMapLock;
             interprocess_upgradable_mutex* _remoteBufferMapLock;
 

@@ -87,10 +87,11 @@ bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipadd
     return true;
 }
 
-bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, void* data) {
+bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t portOffset, void* data) {
     interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
     try {
-        Buffer buf = _remoteBufferMap->at(ipaddr+name);
+        RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
+        RemoteBuffer buf = _remoteBufferMap->at(key);
         interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
         void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
         uint16_t len = std::get<1>(buf);
@@ -104,7 +105,7 @@ bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, 
 bool dsm::Client::getLocalBufferContents(std::string name, void* data) {
     interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
     try {
-        Buffer buf = _localBufferMap->at(name);
+        LocalBuffer buf = _localBufferMap->at(name);
         interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
         void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
         uint16_t len = std::get<1>(buf);
@@ -118,7 +119,7 @@ bool dsm::Client::getLocalBufferContents(std::string name, void* data) {
 bool dsm::Client::setLocalBufferContents(std::string name, const void* data) {
     interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
     try {
-        Buffer buf = _localBufferMap->at(name);
+        LocalBuffer buf = _localBufferMap->at(name);
         interprocess::scoped_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
         void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
         uint16_t len = std::get<1>(buf);

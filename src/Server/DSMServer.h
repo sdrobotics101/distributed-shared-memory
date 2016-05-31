@@ -8,7 +8,6 @@
 #include <unordered_map>
 #include <atomic>
 
-#include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/array.hpp>
 #include <boost/thread.hpp>
@@ -24,7 +23,6 @@
 
 #include "../Shared/DSMBase.h"
 
-#define REQUEST_BASE_PORT 8888
 #define MULTICAST_BASE_PORT 30000
 
 #define MAX_CLIENTS 16
@@ -32,8 +30,6 @@
 
 #define SENDER_DELAY 10
 
-namespace asio = boost::asio;
-namespace ip = boost::asio::ip;
 namespace logging = boost::log;
 
 enum severity_levels {
@@ -56,16 +52,16 @@ namespace dsm {
             void start();
             void stop();
         private:
-            void createLocalBuffer(std::string name, uint16_t size, uint16_t header, bool localOnly);
-            void createRemoteBuffer(std::string name, std::string ipaddr, uint16_t size);
+            void createLocalBuffer(LocalBufferKey key, uint16_t size, uint16_t header, bool localOnly);
+            void createRemoteBuffer(RemoteBufferKey key, uint16_t size);
             void fetchRemoteBuffer(std::string name, struct in_addr addr, uint16_t header);
 
             void disconnectLocal(std::string name, uint16_t header);
             void disconnectRemote(std::string name, struct in_addr addr, uint16_t header);
             void disconnectClient(uint16_t header);
 
-            void removeLocalBuffer(std::string name);
-            void removeRemoteBuffer(std::string name, std::string ipaddr);
+            void removeLocalBuffer(LocalBufferKey key);
+            void removeRemoteBuffer(RemoteBufferKey key);
 
             void sendRequests();
             void sendACKs();
@@ -74,7 +70,7 @@ namespace dsm {
 
             void processRequest(ip::udp::endpoint remoteEndpoint);
             void processACK(ip::udp::endpoint remoteEndpoint);
-            void processData(const boost::system::error_code &error, size_t bytesReceived, std::string name, ip::udp::endpoint remoteEndpoint, ip::udp::socket* sock, ip::udp::endpoint* sender);
+            void processData(const boost::system::error_code &error, size_t bytesReceived, RemoteBufferKey key, ip::udp::socket* sock, ip::udp::endpoint sender);
 
             void senderThreadFunction();
             void receiverThreadFunction();
@@ -98,36 +94,24 @@ namespace dsm {
 
             std::vector<ip::udp::socket*> _sockets;
             std::vector<ip::udp::endpoint*> _senderEndpoints;
-            std::unordered_map<std::string, boost::array<char, 256>> _remoteReceiveBuffers;
-
-            //sorted sets of names of created local and remote buffers, so two with the same name aren't created
-            std::set<std::string> _createdLocalBuffers;
-            boost::shared_mutex _createdLocalBuffersMutex;
-
-            std::set<std::string> _createdRemoteBuffers;
-            boost::shared_mutex _createdRemoteBuffersMutex;
-
-            //map from local buffer name to multicast endpoint of listeners
-            //TODO? this really only needs to store the port, could create endpoints on the fly
-            std::unordered_map<std::string, ip::udp::endpoint> _localBufferMulticastAddresses;
-            boost::shared_mutex _localBufferMulticastAddressesMutex;
+            boost::unordered_map<RemoteBufferKey, boost::array<char, 256>, boost::hash<RemoteBufferKey>, std::equal_to<RemoteBufferKey>> _remoteReceiveBuffers;
 
             //map from local buffer name to client IDs of listeners
-            std::unordered_map<std::string, std::set<uint8_t>> _localBufferLocalListeners;
+            boost::unordered_map<LocalBufferKey, std::set<uint8_t>> _localBufferLocalListeners;
 
             //map from remote buffer to client IDs of local listeners
-            std::unordered_map<std::string, std::set<uint8_t>> _remoteBufferLocalListeners;
+            boost::unordered_map<RemoteBufferKey, std::set<uint8_t>, boost::hash<RemoteBufferKey>, std::equal_to<RemoteBufferKey>> _remoteBufferLocalListeners;
+
+            //map from client ID to list of local and remote buffers subscribed to
+            boost::unordered_map<uint8_t, std::pair<std::set<LocalBufferKey>, std::set<RemoteBufferKey>>> _clientSubscriptions;
 
             //list of remote buffers that we need an ACK for
-            std::set<std::pair<std::string, ip::udp::endpoint>> _remoteBuffersToFetch;
+            std::set<RemoteBufferKey> _remoteBuffersToFetch;
             boost::shared_mutex _remoteBuffersToFetchMutex;
 
             //list of remote servers to ACK per buffer
-            std::unordered_map<std::string, std::set<ip::udp::endpoint>> _remoteServersToACK;
+            boost::unordered_map<LocalBufferKey, std::vector<ip::udp::endpoint>> _remoteServersToACK;
             boost::shared_mutex _remoteServersToACKMutex;
-
-            //map from client ID to list of local and remote buffers subscribed to
-            std::unordered_map<uint8_t, std::pair<std::set<std::string>, std::set<std::pair<std::string, std::string>>>> _clientSubscriptions;
 
             logging::sources::severity_logger_mt<severity_levels> _logger;
     };
