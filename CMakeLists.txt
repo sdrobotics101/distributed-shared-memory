@@ -7,45 +7,54 @@ set(PROJECT_NAME_STR DSM-Controller)
 project(${PROJECT_NAME_STR})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -std=c++11")
+set(CMAKE_MACOSX_RPATH 1)
 
-find_package(Boost REQUIRED system thread log)
+find_package(Boost REQUIRED system thread log python)
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_RUNTIME OFF)
 include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 add_definitions(-DBOOST_LOG_DYN_LINK)
 
+find_package(PythonLibs 3.5 REQUIRED)
+include_directories(${PYTHON_INCLUDE_DIRS})
+
 # shared sources
-include_directories("${PROJECT_SOURCE_DIR}/src/Shared")
 file(GLOB SHARED_SOURCES "${PROJECT_SOURCE_DIR}/src/Shared/*.cpp")
 
 # server sources
-include_directories("${PROJECT_SOURCE_DIR}/src/Server")
 file(GLOB SERVER_SOURCES "${PROJECT_SOURCE_DIR}/src/Server/*.cpp")
 
 # client sources
-include_directories("${PROJECT_SOURCE_DIR}/src/Client")
 file(GLOB CLIENT_SOURCES "${PROJECT_SOURCE_DIR}/src/Client/*.cpp")
 
 # server test sources
-set(PROJECT_SERVER_TEST_NAME ${PROJECT_NAME_STR}_server_test)
 file(GLOB SERVER_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*server*.cpp")
 
 # client test sources
-set(PROJECT_CLIENT0_TEST_NAME ${PROJECT_NAME_STR}_client0_test)
 file(GLOB CLIENT0_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*client0*.cpp")
-
-set(PROJECT_CLIENT1_TEST_NAME ${PROJECT_NAME_STR}_client1_test)
 file(GLOB CLIENT1_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*client1*.cpp")
 
-# server0 test target
+# server test target
+set(PROJECT_SERVER_TEST_NAME ${PROJECT_NAME_STR}_server_test)
 add_executable(${PROJECT_SERVER_TEST_NAME} ${SHARED_SOURCES} ${SERVER_SOURCES} ${SERVER_TEST_SOURCES})
 target_link_libraries(${PROJECT_SERVER_TEST_NAME} ${Boost_LIBRARIES})
 # target_compile_definitions(${PROJECT_TEST_NAME})
 
 # client0 test target
+set(PROJECT_CLIENT0_TEST_NAME ${PROJECT_NAME_STR}_client0_test)
 add_executable(${PROJECT_CLIENT0_TEST_NAME} ${SHARED_SOURCES} ${CLIENT_SOURCES} ${CLIENT0_TEST_SOURCES})
 target_link_libraries(${PROJECT_CLIENT0_TEST_NAME} ${Boost_LIBRARIES})
 # target_compile_definitions(${PROJECT_TEST_NAME})
 
 # client1 test target
+set(PROJECT_CLIENT1_TEST_NAME ${PROJECT_NAME_STR}_client1_test)
 add_executable(${PROJECT_CLIENT1_TEST_NAME} ${SHARED_SOURCES} ${CLIENT_SOURCES} ${CLIENT1_TEST_SOURCES})
 target_link_libraries(${PROJECT_CLIENT1_TEST_NAME} ${Boost_LIBRARIES})
 # target_compile_definitions(${PROJECT_TEST_NAME})
+
+set(PROJECT_PYTHON_MODULE_NAME dsmclient)
+add_library(${PROJECT_PYTHON_MODULE_NAME} MODULE ${SHARED_SOURCES} ${CLIENT_SOURCES})
+target_compile_definitions(${PROJECT_PYTHON_MODULE_NAME} PUBLIC BUILD_PYTHON_MODULE)
+target_link_libraries(${PROJECT_PYTHON_MODULE_NAME} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
+set_target_properties(${PROJECT_PYTHON_MODULE_NAME} PROPERTIES PREFIX "" SUFFIX ".so")

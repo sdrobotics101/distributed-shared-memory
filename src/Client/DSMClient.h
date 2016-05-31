@@ -24,9 +24,10 @@ namespace dsm {
             bool doesLocalExist(std::string name);
             bool doesRemoteExist(std::string name, std::string ipaddr, uint8_t portOffset);
 
-            bool getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t portOffset,void* data);
             bool getLocalBufferContents(std::string name, void* data);
             bool setLocalBufferContents(std::string name, const void* data);
+
+            bool getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t portOffset, void* data);
         private:
             uint8_t _clientID;
     };

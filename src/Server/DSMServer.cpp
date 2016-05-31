@@ -326,7 +326,7 @@ void dsm::Server::sendACKs() {
         memcpy(&sendBuffer[8], &multicastPort, sizeof(multicastPort));
         strcpy(&sendBuffer[10], i.first.c_str());
         for (auto const &j : i.second) {
-            BOOST_LOG_SEV(_logger, trace) << "SENDING ACK " << i.first << " " << j.address().to_v4().to_string() << " " << j.port();
+            BOOST_LOG_SEV(_logger, trace) << "SENDING ACK " << i.first << " TO " << j.address().to_v4().to_string() << " " << j.port();
             /* _senderSocket.send_to(buffer(sendBuffer), j); */
             _senderSocket.async_send_to(asio::buffer(sendBuffer),
                                         j,
@@ -345,7 +345,7 @@ void dsm::Server::sendACKs() {
 void dsm::Server::sendData() {
     interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
     for (auto const &i : *_localBufferMap) {
-        BOOST_LOG_SEV(_logger, periodic) << "SENDING DATA {" << i.first << ", " << std::get<3>(i.second).address() << ", " << std::get<3>(i.second).port() << "}";
+        BOOST_LOG_SEV(_logger, periodic) << "SENDING DATA " << i.first << " TO " << std::get<3>(i.second).address() << " " << std::get<3>(i.second).port();
         ip::udp::endpoint endpoint = std::get<3>(i.second);
         if (endpoint.port() == 0) {
             continue;
