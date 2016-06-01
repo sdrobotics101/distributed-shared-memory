@@ -1,7 +1,3 @@
-#CMakeLists.txt file for use with the Google Test framework
-#Place project headers in '/include', sources in '/src', and test sources in '/test'
-#Build and run tests with 'make check'
-
 cmake_minimum_required(VERSION 2.8.9)
 set(PROJECT_NAME_STR DSM-Controller)
 project(${PROJECT_NAME_STR})
@@ -9,7 +5,7 @@ project(${PROJECT_NAME_STR})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -std=c++11")
 set(CMAKE_MACOSX_RPATH 1)
 
-find_package(Boost REQUIRED system thread log python)
+find_package(Boost COMPONENTS system thread log python REQUIRED)
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
@@ -37,21 +33,21 @@ file(GLOB CLIENT1_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*client1*.cpp")
 set(PROJECT_SERVER_TEST_NAME ${PROJECT_NAME_STR}_server_test)
 add_executable(${PROJECT_SERVER_TEST_NAME} ${SHARED_SOURCES} ${SERVER_SOURCES} ${SERVER_TEST_SOURCES})
 target_compile_definitions(${PROJECT_SERVER_TEST_NAME} PUBLIC BOOST_LOG_DYN_LINK)
-target_link_libraries(${PROJECT_SERVER_TEST_NAME} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
+target_link_libraries(${PROJECT_SERVER_TEST_NAME} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_LOG_LIBRARY})
 
 # client0 test target
 set(PROJECT_CLIENT0_TEST_NAME ${PROJECT_NAME_STR}_client0_test)
 add_executable(${PROJECT_CLIENT0_TEST_NAME} ${SHARED_SOURCES} ${CLIENT_SOURCES} ${CLIENT0_TEST_SOURCES})
-target_link_libraries(${PROJECT_CLIENT0_TEST_NAME} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
+target_link_libraries(${PROJECT_CLIENT0_TEST_NAME} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY})
 
 # client1 test target
 set(PROJECT_CLIENT1_TEST_NAME ${PROJECT_NAME_STR}_client1_test)
 add_executable(${PROJECT_CLIENT1_TEST_NAME} ${SHARED_SOURCES} ${CLIENT_SOURCES} ${CLIENT1_TEST_SOURCES})
-target_link_libraries(${PROJECT_CLIENT1_TEST_NAME} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
+target_link_libraries(${PROJECT_CLIENT1_TEST_NAME} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY})
 
 set(PROJECT_PYTHON_MODULE_NAME pydsm)
 add_library(${PROJECT_PYTHON_MODULE_NAME} MODULE ${SHARED_SOURCES} ${CLIENT_SOURCES})
 target_compile_definitions(${PROJECT_PYTHON_MODULE_NAME} PUBLIC BUILD_PYTHON_MODULE)
 target_include_directories(${PROJECT_PYTHON_MODULE_NAME} PUBLIC ${PYTHON_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_PYTHON_MODULE_NAME} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
+target_link_libraries(${PROJECT_PYTHON_MODULE_NAME} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_PYTHON_LIBRARY} ${PYTHON_LIBRARIES})
 set_target_properties(${PROJECT_PYTHON_MODULE_NAME} PROPERTIES PREFIX "" SUFFIX ".so")

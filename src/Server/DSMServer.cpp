@@ -69,16 +69,6 @@ dsm::Server::~Server() {
     _senderThread->join();
     _receiverThread->join();
     _handlerThread->join();
-    delete _senderThread;
-    delete _receiverThread;
-    delete _handlerThread;
-
-    for (auto &i : _sockets) {
-        delete i;
-    }
-    for (auto &i : _remoteReceiveBuffers) {
-        delete i.second.first;
-    }
 
     interprocess::message_queue::remove((_name+"_queue").c_str());
     interprocess::shared_memory_object::remove(_name.c_str());
@@ -91,9 +81,9 @@ void dsm::Server::start() {
     //create send and receive worker threads
 
     _isRunning = true;
-    _senderThread = new boost::thread(boost::bind(&Server::senderThreadFunction, this));
-    _receiverThread = new boost::thread(boost::bind(&Server::receiverThreadFunction, this));
-    _handlerThread = new boost::thread(boost::bind(&Server::handlerThreadFunction, this));
+    _senderThread.reset(new boost::thread(boost::bind(&Server::senderThreadFunction, this)));
+    _receiverThread.reset(new boost::thread(boost::bind(&Server::receiverThreadFunction, this)));
+    _handlerThread.reset(new boost::thread(boost::bind(&Server::handlerThreadFunction, this)));
 
     BOOST_LOG_SEV(_logger, startup) << "MAIN LOOP START";
 
@@ -393,8 +383,7 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint) {
         uint16_t buflen;
         memcpy(&buflen, &_receiveBuffer[2], sizeof(uint16_t));
         createRemoteBuffer(key, buflen);
-        char* receiveBuffer = new char[buflen];
-        _remoteReceiveBuffers[key] = std::make_pair(receiveBuffer, buflen);
+        _remoteReceiveBuffers.insert(std::make_pair(key, std::make_pair(boost::shared_array<char>(new char[buflen]), buflen)));
     }
     {
         //create socket and start handler
@@ -403,21 +392,21 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint) {
         uint16_t mcastport;
         memcpy(&mcastport, &_receiveBuffer[8], sizeof(mcastport));
 
-        ip::udp::socket* sock = new ip::udp::socket(_ioService);
+        boost::shared_ptr<ip::udp::socket> sock(new ip::udp::socket(_ioService));
         ip::udp::endpoint listenEndpoint(ip::address_v4::from_string("0.0.0.0"), mcastport);
         sock->open(ip::udp::v4());
         sock->set_option(ip::udp::socket::reuse_address(true));
         sock->bind(listenEndpoint);
         sock->set_option(ip::multicast::join_group(ip::address_v4(mcastaddr)));
         ip::udp::endpoint senderEndpoint;
-        sock->async_receive_from(asio::buffer(_remoteReceiveBuffers[key].first, _remoteReceiveBuffers[key].second),
+        sock->async_receive_from(asio::buffer(_remoteReceiveBuffers[key].first.get(), _remoteReceiveBuffers[key].second),
                                  senderEndpoint,
                                  boost::bind(&dsm::Server::processData,
                                              this,
                                              asio::placeholders::error,
                                              asio::placeholders::bytes_transferred,
                                              key,
-                                             sock,
+                                             sock.get(),
                                              senderEndpoint));
         _sockets.push_back(sock);
     }
@@ -433,7 +422,6 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
         BOOST_LOG_SEV(_logger, severity_levels::error) << "MAP ENTRY FOR " << key << " DOESN'T EXIST";
-        delete _remoteReceiveBuffers[key].first;
         _remoteReceiveBuffers.erase(key);
         return;
     }
@@ -444,8 +432,8 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
     }
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     interprocess::scoped_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
-    memcpy(ptr, _remoteReceiveBuffers[key].first, len);
-    sock->async_receive_from(asio::buffer(_remoteReceiveBuffers[key].first, _remoteReceiveBuffers[key].second),
+    memcpy(ptr, _remoteReceiveBuffers[key].first.get(), len);
+    sock->async_receive_from(asio::buffer(_remoteReceiveBuffers[key].first.get(), _remoteReceiveBuffers[key].second),
                              sender,
                              boost::bind(&dsm::Server::processData,
                                          this,

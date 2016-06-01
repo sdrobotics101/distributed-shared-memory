@@ -12,6 +12,9 @@
 #include <boost/thread.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
+#include <boost/scoped_ptr.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/shared_array.hpp>
 
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
@@ -85,9 +88,9 @@ namespace dsm {
             void receiverThreadFunction();
             void handlerThreadFunction();
             std::atomic<bool> _isRunning;
-            boost::thread* _senderThread;
-            boost::thread* _receiverThread;
-            boost::thread* _handlerThread;
+            boost::scoped_ptr<boost::thread> _senderThread;
+            boost::scoped_ptr<boost::thread> _receiverThread;
+            boost::scoped_ptr<boost::thread> _handlerThread;
 
             uint8_t _portOffset;
             ip::address _multicastAddress;
@@ -101,8 +104,8 @@ namespace dsm {
             ip::udp::endpoint _senderEndpoint;
             boost::array<char, 36> _receiveBuffer;
 
-            std::vector<ip::udp::socket*> _sockets;
-            boost::unordered_map<RemoteBufferKey, std::pair<char*, uint16_t>> _remoteReceiveBuffers;
+            std::vector<boost::shared_ptr<ip::udp::socket>> _sockets;
+            boost::unordered_map<RemoteBufferKey, std::pair<boost::shared_array<char>, uint16_t>> _remoteReceiveBuffers;
 
             //map from local buffer name to client IDs of listeners
             boost::unordered_map<LocalBufferKey, std::set<uint8_t>> _localBufferLocalListeners;
