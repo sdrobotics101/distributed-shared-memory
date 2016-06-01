@@ -4,22 +4,15 @@
 #include <string>
 #include <tuple>
 #include <cstdint>
-#include <netinet/in.h>
 #include <functional>
-#include <exception>
 
 #include <boost/asio.hpp>
+#include <boost/unordered_map.hpp>
+#include <boost/functional/hash.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/offset_ptr.hpp>
 #include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
-#include <boost/interprocess/sync/sharable_lock.hpp>
-#include <boost/interprocess/sync/upgradable_lock.hpp>
-#include <boost/interprocess/ipc/message_queue.hpp>
-#include <boost/unordered_map.hpp>
-#include <boost/functional/hash.hpp>
-#include <boost/scoped_ptr.hpp>
 
 namespace interprocess = boost::interprocess;
 namespace asio = boost::asio;

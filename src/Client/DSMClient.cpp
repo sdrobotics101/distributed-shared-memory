@@ -1,6 +1,6 @@
 #include "DSMClient.h"
 
-dsm::Client::Client(uint8_t serverID, uint8_t clientID) : Base("server"+std::to_string(serverID)),
+dsm::Client::Client(uint8_t serverID, uint8_t clientID) : Base("server"+std::to_string((serverID < 0 || serverID > 15) ? 0 : serverID)),
                                                           _clientID(clientID) {
     _clientID &= 0x0F;    //only use the lower 4 bits
 }
@@ -45,7 +45,7 @@ bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uin
     }
 
     _message.header = _clientID;
-    _message.header |= (CREATE_REMOTE << 4);
+    _message.header |= (FETCH_REMOTE << 4);
     _message.header |= (portOffset << 8);
 
     std::strcpy(_message.name, name.c_str());
@@ -92,66 +92,91 @@ bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipadd
 
 bool dsm::Client::doesLocalExist(std::string name) {
     interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
-    try {
-        _localBufferMap->at(name);
-        return true;
-    } catch (std::exception const& e) {
-        return false;
-    }
+    return (bool)_localBufferMap->count(name);
 }
 
 bool dsm::Client::doesRemoteExist(std::string name, std::string ipaddr, uint8_t portOffset) {
     interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
-    try {
-        RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
-        RemoteBuffer buf = _remoteBufferMap->at(key);
-        return true;
-    } catch (std::exception const& e) {
-        return false;
-    }
+    RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
+    return (bool)_remoteBufferMap->count(key);
 }
 
 bool dsm::Client::getLocalBufferContents(std::string name, void* data) {
     interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
-    try {
-        LocalBuffer buf = _localBufferMap->at(name);
-        interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
-        void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
-        uint16_t len = std::get<1>(buf);
-        memcpy(data, ptr, len);
-        return true;
-    } catch (std::exception const& e) {
+    auto iterator = _localBufferMap->find(name);
+    if (iterator == _localBufferMap->end()) {
         return false;
     }
+    interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
+    uint16_t len = std::get<1>(iterator->second);
+    memcpy(data, ptr, len);
+    return true;
+}
+
+std::string dsm::Client::getLocalBufferContents(std::string name) {
+    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    auto iterator = _localBufferMap->find(name);
+    if (iterator == _localBufferMap->end()) {
+        return "";
+    }
+    interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
+    uint16_t len = std::get<1>(iterator->second);
+    return std::string((char*)ptr, len);
 }
 
 bool dsm::Client::setLocalBufferContents(std::string name, const void* data) {
     interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
-    try {
-        LocalBuffer buf = _localBufferMap->at(name);
-        interprocess::scoped_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
-        void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
-        uint16_t len = std::get<1>(buf);
-        memcpy(ptr, data, len);
-        return true;
-    } catch (std::exception const& e) {
+    auto iterator = _localBufferMap->find(name);
+    if (iterator == _localBufferMap->end()) {
         return false;
     }
+    interprocess::scoped_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
+    uint16_t len = std::get<1>(iterator->second);
+    memcpy(ptr, data, len);
+    return true;
+}
+
+bool dsm::Client::setLocalBufferContents(std::string name, std::string data) {
+    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    auto iterator = _localBufferMap->find(name);
+    if (iterator == _localBufferMap->end()) {
+        return false;
+    }
+    interprocess::scoped_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
+    uint16_t len = std::get<1>(iterator->second);
+    memcpy(ptr, data.data(), len);
+    return true;
 }
 
 bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t portOffset, void* data) {
     interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
-    try {
-        RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
-        RemoteBuffer buf = _remoteBufferMap->at(key);
-        interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(buf).get()));
-        void* ptr = _segment.get_address_from_handle(std::get<0>(buf));
-        uint16_t len = std::get<1>(buf);
-        memcpy(data, ptr, len);
-        return true;
-    } catch (std::exception const& e) {
+    RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
+    auto iterator = _remoteBufferMap->find(key);
+    if (iterator == _remoteBufferMap->end()) {
         return false;
     }
+    interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
+    uint16_t len = std::get<1>(iterator->second);
+    memcpy(data, ptr, len);
+    return true;
+}
+
+std::string dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t portOffset) {
+    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
+    RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
+    auto iterator = _remoteBufferMap->find(key);
+    if (iterator == _remoteBufferMap->end()) {
+        return "";
+    }
+    interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
+    uint16_t len = std::get<1>(iterator->second);
+    return std::string((char*)ptr, len);
 }
 
 #ifdef BUILD_PYTHON_MODULE

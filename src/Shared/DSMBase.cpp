@@ -13,8 +13,6 @@ dsm::Base::Base(std::string name) : _name(name),
     _remoteBufferMap = _segment.find_or_construct<RemoteBufferMap>("RemoteBufferMap")(INITIAL_NUM_BUCKETS,
                                                                                       boost::hash<RemoteBufferKey>(),
                                                                                       std::equal_to<RemoteBufferKey>(),
-                                                                                      /* RemoteBufferKeyHash(), */
-                                                                                      /* RemoteBufferKeyEqual(), */
                                                                                       remoteBufferAllocator);
 
     _localBufferMapLock = _segment.find_or_construct<interprocess_upgradable_mutex>("LocalBufferMapLock")();

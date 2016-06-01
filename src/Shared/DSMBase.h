@@ -2,24 +2,16 @@
 #define DSMBASE_H
 
 #include <string>
-#include <tuple>
 #include <cstdint>
 #include <netinet/in.h>
 #include <functional>
-#include <exception>
 
 #include <boost/asio.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/offset_ptr.hpp>
 #include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
-#include <boost/interprocess/sync/sharable_lock.hpp>
-#include <boost/interprocess/sync/upgradable_lock.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
-#include <boost/unordered_map.hpp>
 #include <boost/functional/hash.hpp>
-#include <boost/scoped_ptr.hpp>
 
 #include "DSMTypedefs.h"
 
@@ -34,7 +26,7 @@
 
 //message type codes
 #define CREATE_LOCAL 0
-#define CREATE_REMOTE 1
+#define FETCH_REMOTE 1
 #define CREATE_LOCALONLY 2
 #define DISCONNECT_LOCAL 3
 #define DISCONNECT_REMOTE 4
@@ -43,6 +35,8 @@
 namespace interprocess = boost::interprocess;
 namespace asio = boost::asio;
 namespace ip = boost::asio::ip;
+
+using interprocess::interprocess_upgradable_mutex;
 
 namespace dsm {
     class Base {

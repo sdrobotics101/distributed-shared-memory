@@ -9,7 +9,7 @@ int main() {
     data[4] = '\0';
     while (strcmp(data, "kill") != 0) {
         if (_client.getRemoteBufferContents("remote0", "127.0.0.1", 6, data)) {
-            std::cout << "WORD: " << data << std::endl;
+            std::cout << "DATA: " << data << std::endl;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }

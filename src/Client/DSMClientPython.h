@@ -7,19 +7,21 @@
 
 using namespace boost::python;
 
-BOOST_PYTHON_MODULE(dsmclient) {
-    class_<RemoteBufferKey>("RemoteBufferKey", init<std::string, ip::udp::endpoint>())
-        ;
-    class_<dsm::Client, bases<dsm::Base>, boost::noncopyable>("DSMClient", init<uint8_t, uint8_t>())
+std::string (dsm::Client::*getLocalBuffer)(std::string) = &dsm::Client::getLocalBufferContents;
+bool (dsm::Client::*setLocalBuffer)(std::string, std::string) = &dsm::Client::setLocalBufferContents;
+std::string (dsm::Client::*getRemoteBuffer)(std::string, std::string, uint8_t) = &dsm::Client::getRemoteBufferContents;
+
+BOOST_PYTHON_MODULE(pydsm) {
+    class_<dsm::Client, boost::noncopyable>("Client", init<uint8_t, uint8_t>())
         .def("registerLocalBuffer", &dsm::Client::registerLocalBuffer)
         .def("registerRemoteBuffer", &dsm::Client::registerRemoteBuffer)
         .def("disconnectFromLocalBuffer", &dsm::Client::disconnectFromLocalBuffer)
         .def("disconnectFromRemoteBuffer", &dsm::Client::disconnectFromRemoteBuffer)
         .def("doesLocalExist", &dsm::Client::doesLocalExist)
         .def("doesRemoteExist", &dsm::Client::doesRemoteExist)
-        .def("getLocalBufferContents", &dsm::Client::getLocalBufferContents)
-        .def("setLocalBufferContents", &dsm::Client::setLocalBufferContents)
-        .def("getRemoteBufferContents", &dsm::Client::getRemoteBufferContents)
+        .def("getLocalBufferContents", getLocalBuffer)
+        .def("setLocalBufferContents", setLocalBuffer)
+        .def("getRemoteBufferContents", getRemoteBuffer)
         ;
 }
 

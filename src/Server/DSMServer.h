@@ -2,25 +2,33 @@
 #define DSMSERVER_H
 
 #include <iostream>
-#include <cstdio>
-#include <set>
+#include <cstdint>
 #include <vector>
 #include <atomic>
+#include <arpa/inet.h>
 
 #include <boost/bind.hpp>
 #include <boost/array.hpp>
 #include <boost/thread.hpp>
+#include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
 #include <boost/log/core.hpp>
-#include <boost/core/null_deleter.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/attributes.hpp>
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/sources/record_ostream.hpp>
 #include <boost/log/sinks/sync_frontend.hpp>
 #include <boost/log/sinks/text_ostream_backend.hpp>
+#include <boost/core/null_deleter.hpp>
 
+#include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
+#include <boost/interprocess/ipc/message_queue.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
+#include <boost/interprocess/sync/sharable_lock.hpp>
+
+#include "../Shared/DSMTypedefs.h"
 #include "../Shared/DSMBase.h"
 
 #define MULTICAST_BASE_PORT 30000
@@ -28,7 +36,7 @@
 #define MAX_CLIENTS 16
 #define MAX_BUFFERS_PER_CLIENT 64
 
-#define SENDER_DELAY 10
+#define SENDER_DELAY 10 //milliseconds
 
 namespace logging = boost::log;
 
@@ -94,8 +102,7 @@ namespace dsm {
             boost::array<char, 36> _receiveBuffer;
 
             std::vector<ip::udp::socket*> _sockets;
-            /* std::vector<ip::udp::endpoint*> _senderEndpoints; */
-            boost::unordered_map<RemoteBufferKey, boost::array<char, 256>> _remoteReceiveBuffers;
+            boost::unordered_map<RemoteBufferKey, std::pair<char*, uint16_t>> _remoteReceiveBuffers;
 
             //map from local buffer name to client IDs of listeners
             boost::unordered_map<LocalBufferKey, std::set<uint8_t>> _localBufferLocalListeners;
