@@ -91,23 +91,23 @@ bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipadd
 }
 
 bool dsm::Client::doesLocalExist(std::string name) {
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     return (bool)_localBufferMap->count(name);
 }
 
 bool dsm::Client::doesRemoteExist(std::string name, std::string ipaddr, uint8_t portOffset) {
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
     return (bool)_remoteBufferMap->count(key);
 }
 
 bool dsm::Client::getLocalBufferContents(std::string name, void* data) {
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(name);
     if (iterator == _localBufferMap->end()) {
         return false;
     }
-    interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    interprocess::sharable_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     uint16_t len = std::get<1>(iterator->second);
     memcpy(data, ptr, len);
@@ -115,24 +115,24 @@ bool dsm::Client::getLocalBufferContents(std::string name, void* data) {
 }
 
 std::string dsm::Client::getLocalBufferContents(std::string name) {
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(name);
     if (iterator == _localBufferMap->end()) {
         return "";
     }
-    interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    interprocess::sharable_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     uint16_t len = std::get<1>(iterator->second);
     return std::string((char*)ptr, len);
 }
 
 bool dsm::Client::setLocalBufferContents(std::string name, const void* data) {
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(name);
     if (iterator == _localBufferMap->end()) {
         return false;
     }
-    interprocess::scoped_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    interprocess::scoped_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     uint16_t len = std::get<1>(iterator->second);
     memcpy(ptr, data, len);
@@ -140,12 +140,12 @@ bool dsm::Client::setLocalBufferContents(std::string name, const void* data) {
 }
 
 bool dsm::Client::setLocalBufferContents(std::string name, std::string data) {
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(name);
     if (iterator == _localBufferMap->end()) {
         return false;
     }
-    interprocess::scoped_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    interprocess::scoped_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     uint16_t len = std::get<1>(iterator->second);
     memcpy(ptr, data.data(), len);
@@ -153,13 +153,13 @@ bool dsm::Client::setLocalBufferContents(std::string name, std::string data) {
 }
 
 bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t portOffset, void* data) {
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
         return false;
     }
-    interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    interprocess::sharable_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     uint16_t len = std::get<1>(iterator->second);
     memcpy(data, ptr, len);
@@ -167,13 +167,13 @@ bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, 
 }
 
 std::string dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t portOffset) {
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
         return "";
     }
-    interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    interprocess::sharable_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     uint16_t len = std::get<1>(iterator->second);
     return std::string((char*)ptr, len);

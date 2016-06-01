@@ -60,8 +60,8 @@ dsm::Server::~Server() {
     }
     _segment.destroy<LocalBufferMap>("LocalBufferMap");
     _segment.destroy<RemoteBufferMap>("RemoteBufferMap");
-    _segment.destroy<interprocess_upgradable_mutex>("LocalBufferMapLock");
-    _segment.destroy<interprocess_upgradable_mutex>("RemoteBufferMapLock");
+    _segment.destroy<interprocess_sharable_mutex>("LocalBufferMapLock");
+    _segment.destroy<interprocess_sharable_mutex>("RemoteBufferMapLock");
 
     /* clean up network */
     _isRunning = false;
@@ -151,7 +151,7 @@ void dsm::Server::stop() {
 void dsm::Server::createLocalBuffer(LocalBufferKey key, uint16_t size, uint16_t header, bool localOnly) {
     BOOST_LOG_SEV(_logger, trace) << "CREATING LOCAL BUFFER: " << key;
     uint8_t clientID = header & 0x0F;
-    interprocess::scoped_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     if (_localBufferMap->find(key) != _localBufferMap->end()) {
         _localBufferLocalListeners[key].insert(clientID);
         _clientSubscriptions[clientID].first.insert(key);
@@ -169,8 +169,8 @@ void dsm::Server::createLocalBuffer(LocalBufferKey key, uint16_t size, uint16_t 
     //TODO make these 2 allocate calls into one
     void* buf = _segment.allocate(size);
     interprocess::managed_shared_memory::handle_t handle = _segment.get_handle_from_address(buf);
-    interprocess::offset_ptr<interprocess_upgradable_mutex> mutex = static_cast<interprocess_upgradable_mutex*>(_segment.allocate(sizeof(interprocess_upgradable_mutex)));
-    new (mutex.get()) interprocess_upgradable_mutex;
+    interprocess::offset_ptr<interprocess_sharable_mutex> mutex = static_cast<interprocess_sharable_mutex*>(_segment.allocate(sizeof(interprocess_sharable_mutex)));
+    new (mutex.get()) interprocess_sharable_mutex;
     ip::udp::endpoint endpoint;
     if (localOnly) {
         endpoint = ip::udp::endpoint(_multicastAddress, 0);
@@ -186,10 +186,10 @@ void dsm::Server::createRemoteBuffer(RemoteBufferKey key, uint16_t size) {
 
     void* buf = _segment.allocate(size);
     interprocess::managed_shared_memory::handle_t handle = _segment.get_handle_from_address(buf);
-    interprocess::offset_ptr<interprocess_upgradable_mutex> mutex = static_cast<interprocess_upgradable_mutex*>(_segment.allocate(sizeof(interprocess_upgradable_mutex)));
-    new (mutex.get()) interprocess_upgradable_mutex;
+    interprocess::offset_ptr<interprocess_sharable_mutex> mutex = static_cast<interprocess_sharable_mutex*>(_segment.allocate(sizeof(interprocess_sharable_mutex)));
+    new (mutex.get()) interprocess_sharable_mutex;
 
-    interprocess::scoped_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
+    interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     _remoteBufferMap->insert(std::make_pair(key, std::make_tuple(handle, size, mutex)));
 }
 
@@ -204,7 +204,7 @@ void dsm::Server::fetchRemoteBuffer(std::string name, struct in_addr addr, uint1
     _remoteBufferLocalListeners[key].insert(clientID);
     _clientSubscriptions[clientID].second.insert(key);
 
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     if (_remoteBufferMap->find(key) != _remoteBufferMap->end()) {
         return;
     }
@@ -257,7 +257,7 @@ void dsm::Server::disconnectClient(uint16_t header) {
 
 void dsm::Server::removeLocalBuffer(LocalBufferKey key) {
     BOOST_LOG_SEV(_logger, trace) << "REMOVING LOCAL BUFFER " << key;
-    interprocess::scoped_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(key);
     if (iterator == _localBufferMap->end()) {
         return;
@@ -269,7 +269,7 @@ void dsm::Server::removeLocalBuffer(LocalBufferKey key) {
 
 void dsm::Server::removeRemoteBuffer(RemoteBufferKey key) {
     BOOST_LOG_SEV(_logger, trace) << "REMOVING REMOTE BUFFER " << key;
-    interprocess::scoped_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
+    interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
         return;
@@ -298,7 +298,7 @@ void dsm::Server::sendRequests() {
 
 void dsm::Server::sendACKs() {
     boost::upgrade_lock<boost::shared_mutex> ackLock(_remoteServersToACKMutex);
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     for (auto &i : _remoteServersToACK) {
         auto iterator = _localBufferMap->find(i.first);
         if  (iterator == _localBufferMap->end()) {
@@ -339,7 +339,7 @@ void dsm::Server::sendACKs() {
 }
 
 void dsm::Server::sendData() {
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     for (auto const &i : *_localBufferMap) {
         BOOST_LOG_SEV(_logger, periodic) << "SENDING DATA " << i.first << " TO " << std::get<3>(i.second).address() << " " << std::get<3>(i.second).port();
         ip::udp::endpoint endpoint = std::get<3>(i.second);
@@ -348,7 +348,7 @@ void dsm::Server::sendData() {
         }
         void* data = _segment.get_address_from_handle(std::get<0>(i.second));
         uint16_t len = std::get<1>(i.second);
-        interprocess::sharable_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(i.second).get()));
+        interprocess::sharable_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(i.second).get()));
         _senderSocket.async_send_to(asio::buffer(data,len),
                                     endpoint,
                                     boost::bind(&dsm::Server::sendHandler,
@@ -364,7 +364,7 @@ void dsm::Server::processRequest(ip::udp::endpoint remoteEndpoint) {
     std::string name(&_receiveBuffer[2], (uint8_t)_receiveBuffer[1]);
     remoteEndpoint.port(REQUEST_BASE_PORT+_receiveBuffer[0]);
     BOOST_LOG_SEV(_logger, info) << "RECEIVED REQUEST FOR " << name << " FROM " << remoteEndpoint.address().to_string() << " " << remoteEndpoint.port();
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_localBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     if (_localBufferMap->find(name) != _localBufferMap->end()) {
         mapLock.unlock();
         boost::unique_lock<boost::shared_mutex> lock(_remoteServersToACKMutex);
@@ -429,7 +429,7 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
         BOOST_LOG_SEV(_logger, severity_levels::error) << "ERROR PROCESSING DATA FOR " << key;
         return;
     }
-    interprocess::sharable_lock<interprocess_upgradable_mutex> mapLock(*_remoteBufferMapLock);
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
         BOOST_LOG_SEV(_logger, severity_levels::error) << "MAP ENTRY FOR " << key << " DOESN'T EXIST";
@@ -443,7 +443,7 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
         return;
     }
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
-    interprocess::scoped_lock<interprocess_upgradable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
+    interprocess::scoped_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     memcpy(ptr, _remoteReceiveBuffers[key].first, len);
     sock->async_receive_from(asio::buffer(_remoteReceiveBuffers[key].first, _remoteReceiveBuffers[key].second),
                              sender,

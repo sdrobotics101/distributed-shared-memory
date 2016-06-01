@@ -12,13 +12,13 @@
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/offset_ptr.hpp>
-#include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
+#include <boost/interprocess/sync/interprocess_sharable_mutex.hpp>
 
 namespace interprocess = boost::interprocess;
 namespace asio = boost::asio;
 namespace ip = boost::asio::ip;
 
-using interprocess::interprocess_upgradable_mutex;
+using interprocess::interprocess_sharable_mutex;
 
 struct RemoteBufferKey {
     RemoteBufferKey(std::string string, ip::udp::endpoint end) : name(string), endpoint(end) {}
@@ -42,13 +42,13 @@ struct RemoteBufferKey {
     const ip::udp::endpoint endpoint;
 };
 
-typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_upgradable_mutex>, ip::udp::endpoint> LocalBuffer;
+typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_sharable_mutex>, ip::udp::endpoint> LocalBuffer;
 typedef const std::string LocalBufferKey;
 typedef std::pair<LocalBufferKey, LocalBuffer> MappedLocalBuffer;
 typedef interprocess::allocator<MappedLocalBuffer, interprocess::managed_shared_memory::segment_manager> LocalBufferAllocator;
 typedef boost::unordered_map<LocalBufferKey, LocalBuffer, boost::hash<LocalBufferKey>, std::equal_to<LocalBufferKey>, LocalBufferAllocator> LocalBufferMap;
 
-typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_upgradable_mutex>> RemoteBuffer;
+typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_sharable_mutex>> RemoteBuffer;
 typedef std::pair<RemoteBufferKey, RemoteBuffer> MappedRemoteBuffer;
 typedef interprocess::allocator<MappedRemoteBuffer, interprocess::managed_shared_memory::segment_manager> RemoteBufferAllocator;
 typedef boost::unordered_map<RemoteBufferKey, RemoteBuffer, boost::hash<RemoteBufferKey>, std::equal_to<RemoteBufferKey>, RemoteBufferAllocator> RemoteBufferMap;

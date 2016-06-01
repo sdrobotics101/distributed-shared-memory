@@ -15,6 +15,6 @@ dsm::Base::Base(std::string name) : _name(name),
                                                                                       std::equal_to<RemoteBufferKey>(),
                                                                                       remoteBufferAllocator);
 
-    _localBufferMapLock = _segment.find_or_construct<interprocess_upgradable_mutex>("LocalBufferMapLock")();
-    _remoteBufferMapLock = _segment.find_or_construct<interprocess_upgradable_mutex>("RemoteBufferMapLock")();
+    _localBufferMapLock = _segment.find_or_construct<interprocess_sharable_mutex>("LocalBufferMapLock")();
+    _remoteBufferMapLock = _segment.find_or_construct<interprocess_sharable_mutex>("RemoteBufferMapLock")();
 }
