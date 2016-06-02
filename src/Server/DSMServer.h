@@ -16,6 +16,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/shared_array.hpp>
 
+#ifdef LOGGING_ENABLED
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/attributes.hpp>
@@ -24,6 +25,7 @@
 #include <boost/log/sinks/sync_frontend.hpp>
 #include <boost/log/sinks/text_ostream_backend.hpp>
 #include <boost/core/null_deleter.hpp>
+#endif
 
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/sync/interprocess_sharable_mutex.hpp>
@@ -41,6 +43,7 @@
 
 #define SENDER_DELAY 10 //milliseconds
 
+#ifdef LOGGING_ENABLED
 namespace logging = boost::log;
 
 enum severity_levels {
@@ -54,6 +57,7 @@ enum severity_levels {
 };
 
 BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", severity_levels);
+#endif
 
 namespace dsm {
     class Server : public Base {
@@ -125,7 +129,9 @@ namespace dsm {
             boost::unordered_map<LocalBufferKey, std::vector<ip::udp::endpoint>> _remoteServersToACK;
             boost::shared_mutex _remoteServersToACKMutex;
 
+#ifdef LOGGING_ENABLED
             logging::sources::severity_logger_mt<severity_levels> _logger;
+#endif
     };
 }
 
