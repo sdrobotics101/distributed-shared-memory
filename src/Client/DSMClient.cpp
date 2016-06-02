@@ -1,5 +1,9 @@
 #include "DSMClient.h"
 
+#ifdef BUILD_PYTHON_MODULE
+#include "DSMClientPython.h"
+#endif
+
 dsm::Client::Client(uint8_t serverID, uint8_t clientID) : Base("server"+std::to_string((serverID < 0 || serverID > 15) ? 0 : serverID)),
                                                           _clientID(clientID) {
     _clientID &= 0x0F;    //only use the lower 4 bits
@@ -178,7 +182,3 @@ std::string dsm::Client::getRemoteBufferContents(std::string name, std::string i
     uint16_t len = std::get<1>(iterator->second);
     return std::string((char*)ptr, len);
 }
-
-#ifdef BUILD_PYTHON_MODULE
-#include "DSMClientPython.h"
-#endif
