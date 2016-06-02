@@ -114,7 +114,7 @@ void dsm::Server::start() {
                 disconnectLocal(_message.name, _message.header);
                 break;
             case DISCONNECT_REMOTE:
-                BOOST_LOG_SEV(_logger, info) << "REMOVE REMOTE LISTENER" << _message.name << " " << (_message.header & 0x0F);
+                BOOST_LOG_SEV(_logger, info) << "REMOVE REMOTE LISTENER: " << _message.name << " " << (_message.header & 0x0F);
                 disconnectRemote(_message.name, _message.footer.ipaddr, _message.header);
                 break;
             case DISCONNECT_CLIENT:
@@ -256,13 +256,22 @@ void dsm::Server::removeLocalBuffer(LocalBufferKey key) {
 
 void dsm::Server::removeRemoteBuffer(RemoteBufferKey key) {
     BOOST_LOG_SEV(_logger, trace) << "REMOVING REMOTE BUFFER " << key;
-    interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
-    auto iterator = _remoteBufferMap->find(key);
-    if (iterator == _remoteBufferMap->end()) {
+
+    boost::unique_lock<boost::shared_mutex> fetchLock(_remoteBuffersToFetchMutex);
+    auto fetchIterator = _remoteBuffersToFetch.find(key);
+    if (fetchIterator != _remoteBuffersToFetch.end()) {
+        _remoteBuffersToFetch.erase(key);
         return;
     }
-    _segment.deallocate(_segment.get_address_from_handle(std::get<0>(iterator->second)));
-    _segment.deallocate(std::get<2>(iterator->second).get());
+    fetchLock.unlock();
+
+    interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
+    auto mapIterator = _remoteBufferMap->find(key);
+    if (mapIterator == _remoteBufferMap->end()) {
+        return;
+    }
+    _segment.deallocate(_segment.get_address_from_handle(std::get<0>(mapIterator->second)));
+    _segment.deallocate(std::get<2>(mapIterator->second).get());
     _remoteBufferMap->erase(key);
 }
 

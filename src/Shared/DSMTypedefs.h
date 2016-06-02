@@ -14,6 +14,23 @@
 #include <boost/interprocess/offset_ptr.hpp>
 #include <boost/interprocess/sync/interprocess_sharable_mutex.hpp>
 
+#define SEGMENT_SIZE 65536
+#define MAX_BUFFER_SIZE 1024
+
+#define MAX_NUM_MESSAGES 10
+#define MESSAGE_SIZE 32
+#define INITIAL_NUM_BUCKETS 10
+
+#define REQUEST_BASE_PORT 8888
+
+//message type codes
+#define CREATE_LOCAL 0
+#define FETCH_REMOTE 1
+#define CREATE_LOCALONLY 2
+#define DISCONNECT_LOCAL 3
+#define DISCONNECT_REMOTE 4
+#define DISCONNECT_CLIENT 5
+
 namespace interprocess = boost::interprocess;
 namespace asio = boost::asio;
 namespace ip = boost::asio::ip;
@@ -35,7 +52,7 @@ struct RemoteBufferKey {
                x.endpoint.port() == y.endpoint.port());
     }
     friend std::ostream& operator<<(std::ostream& stream, const RemoteBufferKey& x) {
-        stream << "{" << x.name << ", " << x.endpoint.address().to_v4().to_string() << ", " << x.endpoint.port() << "}";
+        stream << "{" << x.name << ", " << x.endpoint.address().to_v4().to_string() << ", " << x.endpoint.port()-REQUEST_BASE_PORT << "}";
         return stream;
     }
     const std::string name;
