@@ -13,7 +13,7 @@
 #include <boost/interprocess/ipc/message_queue.hpp>
 #include <boost/functional/hash.hpp>
 
-#include "DSMTypedefs.h"
+#include "DSMDefinitions.h"
 
 namespace interprocess = boost::interprocess;
 namespace asio = boost::asio;

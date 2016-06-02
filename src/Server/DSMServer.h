@@ -31,7 +31,7 @@
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/interprocess/sync/sharable_lock.hpp>
 
-#include "../Shared/DSMTypedefs.h"
+#include "../Shared/DSMDefinitions.h"
 #include "../Shared/DSMBase.h"
 
 #define MULTICAST_BASE_PORT 30000
