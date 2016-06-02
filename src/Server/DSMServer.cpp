@@ -206,7 +206,6 @@ void dsm::Server::fetchRemoteBuffer(std::string name, struct in_addr addr, uint1
 
 void dsm::Server::disconnectLocal(std::string name, uint16_t header) {
     uint8_t clientID = header & 0x0F;
-    BOOST_LOG_SEV(_logger, trace) << "CLIENT " << clientID << "DISCONNECTED FROM LOCAL " << name;
     _localBufferLocalListeners[name].erase(clientID);
     _clientSubscriptions[clientID].first.erase(name);
     if (_localBufferLocalListeners[name].empty()) {
@@ -219,7 +218,6 @@ void dsm::Server::disconnectRemote(std::string name, struct in_addr addr, uint16
     uint8_t clientID = header & 0x0F;
     uint8_t portOffset = (header >> 8) & 0x0F;
     RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
-    BOOST_LOG_SEV(_logger, trace) << "CLIENT " << clientID << "DISCONNECTED FROM REMOTE " << key;
     _remoteBufferLocalListeners[key].erase(clientID);
     _clientSubscriptions[clientID].second.erase(key);
     if (_remoteBufferLocalListeners[key].empty()) {
@@ -229,7 +227,6 @@ void dsm::Server::disconnectRemote(std::string name, struct in_addr addr, uint16
 
 void dsm::Server::disconnectClient(uint16_t header) {
     uint8_t clientID = (header & 0x0F);
-    BOOST_LOG_SEV(_logger, trace) << "CLIENT " << clientID << " DISCONNECTED FROM SERVER";
     for (auto const &i : _clientSubscriptions[clientID].first) {
         _localBufferLocalListeners[i].erase(clientID);
         if (_localBufferLocalListeners[i].empty()) {

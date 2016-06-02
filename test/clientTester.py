@@ -3,11 +3,7 @@ sys.path.insert(0, '../build')
 
 import pydsm
 import argparse
-
-# client.registerRemoteBuffer("remote0", "127.0.0.1", 6)
-
-# data = client.getRemoteBufferContents("remote0", "127.0.0.1", 6)
-# print("DATA: " + data)
+import ipaddress
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -17,16 +13,71 @@ if __name__ == "__main__":
     client = pydsm.Client(args.serverID, args.clientID)
     while (1):
         tokens = input("> ").split()
-        if (tokens[0] == "kill"):
+        if (tokens[0] == "kill" or tokens[0] == "exit"):
             break
-        else if (tokens[0] == "regl" and len(tokens) == 4):
-        else if (tokens[0] == "regr" and len(tokens) == 4):
-        else if (tokens[0] == "dcl" and len(tokens) == 2):
-        else if (tokens[0] == "dcr" and len(tokens) == 4):
-        else if (tokens[0] == "checkl" and len(tokens) == 2):
-        else if (tokens[0] == "checkr" and len(tokens) == 4):
-        else if (tokens[0] == "showl" and len(tokens) == 2):
-        else if (tokens[0] == "setl" and len(tokens) == 2):
-        else if (tokens[0] == "showr" and len(tokens) == 4):
+        elif (tokens[0] == "regl" and len(tokens) == 3):
+            if client.registerLocalBuffer(tokens[1], int(tokens[2]), False):
+                print("Registered new local buffer")
+            else:
+                print("Invalid operands")
+        elif (tokens[0] == "reglo" and len(tokens) == 3):
+            if client.registerLocalBuffer(tokens[1], int(tokens[2]), True):
+                print("Registered new local only buffer")
+            else:
+                print("Invalid operands")
+        elif (tokens[0] == "regr" and len(tokens) == 4):
+            try:
+                ipaddress.ip_address(tokens[2])
+            except ValueError as e:
+                print("invalid IP address")
+                continue
+            if client.registerRemoteBuffer(tokens[1], tokens[2], int(tokens[3])):
+                print("Registered new remote buffer")
+            else:
+                print("Invalid operands")
+        elif (tokens[0] == "dcl" and len(tokens) == 2):
+            if client.disconnectFromLocalBuffer(tokens[1]):
+                print("Disconnected from local buffer")
+            else:
+                print("Invalid operands")
+        elif (tokens[0] == "dcr" and len(tokens) == 4):
+            try:
+                ipaddress.ip_address(tokens[2])
+            except ValueError as e:
+                print("invalid IP address")
+                continue
+            if client.disconnectFromRemoteBuffer(tokens[1], tokens[2], int(tokens[3])):
+                print("Disconnected from remote buffer")
+            else:
+                print("Invalid operands")
+        elif (tokens[0] == "checkl" and len(tokens) == 2):
+            if client.doesLocalExist(tokens[1]):
+                print("Local exists")
+            else:
+                print("Local does not exist")
+        elif (tokens[0] == "checkr" and len(tokens) == 4):
+            try:
+                ipaddress.ip_address(tokens[2])
+            except ValueError as e:
+                print("invalid IP address")
+                continue
+            if client.doesRemoteExist(tokens[1], tokens[2], int(tokens[3])):
+                print("Remote exists")
+            else:
+                print("Remote does not exist")
+        elif (tokens[0] == "getl" and len(tokens) == 2):
+            print(client.getLocalBufferContents(tokens[1]))
+        elif (tokens[0] == "setl" and len(tokens) == 3):
+            if client.setLocalBufferContents(tokens[1], tokens[2]):
+                print("Set local buffer contents")
+            else:
+                print("Invalid operands")
+        elif (tokens[0] == "getr" and len(tokens) == 4):
+            try:
+                ipaddress.ip_address(tokens[2])
+            except ValueError as e:
+                print("invalid IP address")
+                continue
+            print(client.getRemoteBufferContents(tokens[1], tokens[2], int(tokens[3])))
         else:
             print("unknown")

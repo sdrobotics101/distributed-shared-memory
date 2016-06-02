@@ -5,7 +5,7 @@ project(${PROJECT_NAME_STR})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -std=c++11")
 set(CMAKE_MACOSX_RPATH 1)
 
-find_package(Boost COMPONENTS system thread log python REQUIRED)
+find_package(Boost COMPONENTS system thread log python program_options REQUIRED)
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
@@ -22,18 +22,15 @@ file(GLOB SERVER_SOURCES "${PROJECT_SOURCE_DIR}/src/Server/*.cpp")
 # client sources
 file(GLOB CLIENT_SOURCES "${PROJECT_SOURCE_DIR}/src/Client/*.cpp")
 
-# server test sources
-file(GLOB SERVER_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*server*.cpp")
-
 # client test sources
 file(GLOB CLIENT0_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*client0*.cpp")
 file(GLOB CLIENT1_TEST_SOURCES "${PROJECT_SOURCE_DIR}/test/*client1*.cpp")
 
-# server test target
-set(PROJECT_SERVER_TEST_NAME ${PROJECT_NAME_STR}_server_test)
-add_executable(${PROJECT_SERVER_TEST_NAME} ${SHARED_SOURCES} ${SERVER_SOURCES} ${SERVER_TEST_SOURCES})
-target_compile_definitions(${PROJECT_SERVER_TEST_NAME} PUBLIC BOOST_LOG_DYN_LINK)
-target_link_libraries(${PROJECT_SERVER_TEST_NAME} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_LOG_LIBRARY})
+# server target
+set(PROJECT_SERVER_NAME DSMServer)
+add_executable(${PROJECT_SERVER_NAME} ${SHARED_SOURCES} ${SERVER_SOURCES})
+target_compile_definitions(${PROJECT_SERVER_NAME} PUBLIC BOOST_LOG_DYN_LINK)
+target_link_libraries(${PROJECT_SERVER_NAME} ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 # client0 test target
 set(PROJECT_CLIENT0_TEST_NAME ${PROJECT_NAME_STR}_client0_test)
