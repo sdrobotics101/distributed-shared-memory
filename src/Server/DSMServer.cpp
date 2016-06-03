@@ -177,7 +177,7 @@ void dsm::Server::createLocalBuffer(LocalBufferKey key, uint16_t size, uint16_t 
         _clientSubscriptions[clientID].first.insert(key);
         return;
     } else {
-        if (_multicastPortOffsets[clientID] > MAX_BUFFERS_PER_CLIENT-1) {
+        if (!localOnly && _multicastPortOffsets[clientID] > MAX_BUFFERS_PER_CLIENT-1) {
 #ifdef LOGGING_ENABLED
             BOOST_LOG_SEV(_logger, severity_levels::error) << "CLIENT " << clientID << " HAS TOO MANY LOCAL BUFFERS";
 #endif
