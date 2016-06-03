@@ -4,9 +4,15 @@
 #include "DSMClientPython.h"
 #endif
 
-dsm::Client::Client(uint8_t serverID, uint8_t clientID) : Base("server"+std::to_string((serverID < 0 || serverID > 15) ? 0 : serverID)),
-                                                          _clientID(clientID) {
+dsm::Client::Client(uint8_t serverID, uint8_t clientID, bool reset) : Base("server"+std::to_string((serverID < 0 || serverID > 15) ? 0 : serverID)),
+                                                                      _clientID(clientID) {
     _clientID &= 0x0F;    //only use the lower 4 bits
+    if (reset) {
+        _message.reset();
+        _message.header = _clientID;
+        _message.header |= (DISCONNECT_CLIENT << 4);
+        _messageQueue.send(&_message, MESSAGE_SIZE, 0);
+    }
 }
 
 dsm::Client::~Client() {

@@ -12,7 +12,7 @@ bool (dsm::Client::*setLocalBuffer)(std::string, std::string) = &dsm::Client::se
 std::string (dsm::Client::*getRemoteBuffer)(std::string, std::string, uint8_t) = &dsm::Client::getRemoteBufferContents;
 
 BOOST_PYTHON_MODULE(pydsm) {
-    class_<dsm::Client, boost::noncopyable>("Client", init<uint8_t, uint8_t>())
+    class_<dsm::Client, boost::noncopyable>("Client", init<uint8_t, uint8_t, bool>())
         .def("registerLocalBuffer", &dsm::Client::registerLocalBuffer)
         .def("registerRemoteBuffer", &dsm::Client::registerRemoteBuffer)
         .def("disconnectFromLocalBuffer", &dsm::Client::disconnectFromLocalBuffer)

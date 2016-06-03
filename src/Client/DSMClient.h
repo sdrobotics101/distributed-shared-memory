@@ -17,7 +17,7 @@
 namespace dsm {
     class Client : public Base {
         public:
-            Client(uint8_t serverID, uint8_t clientID);
+            Client(uint8_t serverID, uint8_t clientID, bool reset = true);
             virtual ~Client();
 
             bool registerLocalBuffer(std::string name, uint16_t length, bool localOnly);

@@ -276,6 +276,7 @@ void dsm::Server::disconnectClient(uint16_t header) {
         }
     }
     _clientSubscriptions.erase(clientID);
+    _multicastPortOffsets[clientID] = 0;
 }
 
 void dsm::Server::removeLocalBuffer(LocalBufferKey key) {

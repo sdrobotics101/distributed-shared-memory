@@ -17,7 +17,7 @@ if __name__ == "__main__":
     parser.add_argument('serverID', type=int)
     parser.add_argument('clientID', type=int)
     args = parser.parse_args()
-    client = pydsm.Client(args.serverID, args.clientID)
+    client = pydsm.Client(args.serverID, args.clientID, True)
     try:
         while (1):
             tokens = input("> ").split()
