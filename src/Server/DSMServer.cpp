@@ -25,7 +25,7 @@ std::ostream& operator<<(std::ostream& stream, severity_levels level)
 dsm::Server::Server(uint8_t portOffset) : Base("server"+std::to_string((portOffset < 0 || portOffset > 15) ? 0 : portOffset)),
                                           _isRunning(false),
                                           _portOffset((portOffset < 0 || portOffset > 15) ? 0 : portOffset),
-                                          _multicastAddress(ip::address::from_string("239.255.0."+std::to_string(portOffset+1))),
+                                          _multicastAddress(ip::address::from_string("239.255.0."+std::to_string(portOffset))),
                                           _multicastBasePort(MULTICAST_BASE_PORT+(portOffset*MAX_CLIENTS*MAX_BUFFERS_PER_CLIENT)),
                                           _work(_ioService),
                                           _senderSocket(_ioService, ip::udp::v4()),
