@@ -191,11 +191,9 @@ void dsm::Server::createLocalBuffer(LocalBufferKey key, uint16_t size, uint8_t c
     interprocess::managed_shared_memory::handle_t handle = _segment.get_handle_from_address(buf);
     interprocess::offset_ptr<interprocess_sharable_mutex> mutex = static_cast<interprocess_sharable_mutex*>(_segment.allocate(sizeof(interprocess_sharable_mutex)));
     new (mutex.get()) interprocess_sharable_mutex;
-    ip::udp::endpoint endpoint;
-    if (localOnly) {
-        endpoint = ip::udp::endpoint(_multicastAddress, 0);
-    } else {
-        endpoint = ip::udp::endpoint(_multicastAddress, _multicastBasePort+(clientID * MAX_BUFFERS_PER_CLIENT)+_multicastPortOffsets[clientID]);
+    ip::udp::endpoint endpoint(_multicastAddress, 0);
+    if (!localOnly) {
+        endpoint.port(_multicastBasePort+(clientID * MAX_BUFFERS_PER_CLIENT)+_multicastPortOffsets[clientID]);
         _multicastPortOffsets[clientID]++;
     }
     _localBufferMap->insert(std::make_pair(key, std::make_tuple(handle, size, mutex, endpoint)));

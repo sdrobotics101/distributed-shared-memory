@@ -114,7 +114,6 @@ namespace dsm {
             boost::unordered_map<LocalBufferKey, std::set<uint8_t>> _localBufferLocalListeners;
 
             //map from remote buffer to client IDs of local listeners
-            /* boost::unordered_map<RemoteBufferKey, std::set<uint8_t>, boost::hash<RemoteBufferKey>, std::equal_to<RemoteBufferKey>> _remoteBufferLocalListeners; */
             boost::unordered_map<RemoteBufferKey, std::set<uint8_t>> _remoteBufferLocalListeners;
 
             //map from client ID to list of local and remote buffers subscribed to
