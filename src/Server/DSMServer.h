@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <vector>
 #include <atomic>
-#include <arpa/inet.h>
 
 #include <boost/bind.hpp>
 #include <boost/array.hpp>
@@ -70,10 +69,10 @@ namespace dsm {
         private:
             void createLocalBuffer(LocalBufferKey key, uint16_t size, uint8_t clientID, bool localOnly);
             void createRemoteBuffer(RemoteBufferKey key, uint16_t size);
-            void fetchRemoteBuffer(std::string name, struct in_addr addr, uint8_t clientID, uint8_t options);
+            void fetchRemoteBuffer(std::string name, uint32_t addr, uint8_t clientID, uint8_t options);
 
             void disconnectLocal(std::string name, uint8_t clientID);
-            void disconnectRemote(std::string name, struct in_addr addr, uint8_t clientID, uint8_t options);
+            void disconnectRemote(std::string name, uint32_t addr, uint8_t clientID, uint8_t options);
             void disconnectClient(uint8_t clientID);
 
             void removeLocalBuffer(LocalBufferKey key);

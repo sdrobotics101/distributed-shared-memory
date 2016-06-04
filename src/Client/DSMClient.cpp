@@ -45,7 +45,9 @@ bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uin
     if (name.length() > MAX_NAME_SIZE) {
         return false;
     }
-    if (inet_aton(ipaddr.c_str(), &_message.footer.ipaddr) == 0) {
+    boost::system::error_code err;
+    _message.footer.ipaddr = boost::asio::ip::address_v4::from_string(ipaddr, err).to_ulong();
+    if (err) {
         return false;
     }
 
@@ -78,7 +80,9 @@ bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipadd
     if (name.length() > MAX_NAME_SIZE) {
         return false;
     }
-    if (inet_aton(ipaddr.c_str(), &_message.footer.ipaddr) == 0) {
+    boost::system::error_code err;
+    _message.footer.ipaddr = boost::asio::ip::address_v4::from_string(ipaddr, err).to_ulong();
+    if (err) {
         return false;
     }
 

@@ -3,8 +3,8 @@
 
 #include <string>
 #include <cstdint>
-#include <arpa/inet.h>
 
+#include <boost/asio.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/sync/interprocess_sharable_mutex.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>

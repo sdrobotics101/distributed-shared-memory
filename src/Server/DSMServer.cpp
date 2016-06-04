@@ -121,7 +121,7 @@ void dsm::Server::start() {
                 break;
             case FETCH_REMOTE:
 #ifdef LOGGING_ENABLED
-                BOOST_LOG_SEV(_logger, info) << "REMOTE: " << _message.name << " " << inet_ntoa(_message.footer.ipaddr) << " " << (int)(_message.options >> 4);
+                BOOST_LOG_SEV(_logger, info) << "REMOTE: " << _message.name << " " << ip::address_v4(_message.footer.ipaddr) << " " << (int)(_message.options >> 4);
 #endif
                 fetchRemoteBuffer(_message.name, _message.footer.ipaddr, _message.clientID, _message.options);
                 break;
@@ -215,11 +215,10 @@ void dsm::Server::createRemoteBuffer(RemoteBufferKey key, uint16_t size) {
     _remoteBufferMap->insert(std::make_pair(key, std::make_tuple(handle, size, mutex)));
 }
 
-void dsm::Server::fetchRemoteBuffer(std::string name, struct in_addr addr, uint8_t clientID, uint8_t options) {
+void dsm::Server::fetchRemoteBuffer(std::string name, uint32_t addr, uint8_t clientID, uint8_t options) {
     //TODO There must be a better way to translate the ipaddr
-    std::string ipaddr = inet_ntoa(addr);
     uint8_t portOffset = (options >> 4);
-    ip::udp::endpoint endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset);
+    ip::udp::endpoint endpoint(ip::address_v4(addr), REQUEST_BASE_PORT+portOffset);
     RemoteBufferKey key(name, endpoint);
 #ifdef LOGGING_ENABLED
     BOOST_LOG_SEV(_logger, trace) << "FETCHING REMOTE BUFFER: " << key;
@@ -245,10 +244,9 @@ void dsm::Server::disconnectLocal(std::string name, uint8_t clientID) {
     }
 }
 
-void dsm::Server::disconnectRemote(std::string name, struct in_addr addr, uint8_t clientID, uint8_t options) {
-    std::string ipaddr = inet_ntoa(addr);
+void dsm::Server::disconnectRemote(std::string name, uint32_t addr, uint8_t clientID, uint8_t options) {
     uint8_t portOffset = (options >> 4);
-    RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
+    RemoteBufferKey key(name, ip::udp::endpoint(ip::address_v4(addr), REQUEST_BASE_PORT+portOffset));
     _remoteBufferLocalListeners[key].erase(clientID);
     _clientSubscriptions[clientID].second.erase(key);
     if (_remoteBufferLocalListeners[key].empty()) {

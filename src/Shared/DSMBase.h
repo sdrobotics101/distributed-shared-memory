@@ -3,7 +3,6 @@
 
 #include <string>
 #include <cstdint>
-#include <netinet/in.h>
 #include <functional>
 
 #include <boost/asio.hpp>
@@ -43,7 +42,7 @@ namespace dsm {
                 char name[MAX_NAME_SIZE];      //makes this struct 32 bytes
                 union footer {
                     uint16_t size;  //max buffer size will probably be smaller than max value of 16 bit int
-                    struct in_addr ipaddr;
+                    uint32_t ipaddr;
                 } footer;
             } _message;
     };
