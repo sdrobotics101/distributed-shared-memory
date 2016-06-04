@@ -106,42 +106,42 @@ void dsm::Server::start() {
             break;
         }
 
-        switch((_message.header & 0xF0) >> 4) {
+        switch((_message.options & 0x0F)) {
             case CREATE_LOCAL:
 #ifdef LOGGING_ENABLED
-                BOOST_LOG_SEV(_logger, info) << "LOCAL: " << _message.name << " " << _message.footer.size << " " << (_message.header & 0x0F);
+                BOOST_LOG_SEV(_logger, info) << "LOCAL: " << _message.name << " " << _message.footer.size << " " << (int)_message.clientID;
 #endif
-                createLocalBuffer(_message.name, _message.footer.size, _message.header, false);
+                createLocalBuffer(_message.name, _message.footer.size, _message.clientID, false);
                 break;
             case CREATE_LOCALONLY:
 #ifdef LOGGING_ENABLED
-                BOOST_LOG_SEV(_logger, info) << "LOCALONLY: " << _message.name << " " << _message.footer.size << " " << (_message.header & 0x0F);
+                BOOST_LOG_SEV(_logger, info) << "LOCALONLY: " << _message.name << " " << _message.footer.size << " " << (int)_message.clientID;
 #endif
-                createLocalBuffer(_message.name, _message.footer.size, _message.header, true);
+                createLocalBuffer(_message.name, _message.footer.size, _message.clientID, true);
                 break;
             case FETCH_REMOTE:
 #ifdef LOGGING_ENABLED
-                BOOST_LOG_SEV(_logger, info) << "REMOTE: " << _message.name << " " << inet_ntoa(_message.footer.ipaddr) << " " << ((_message.header >> 8) & 0x0F);
+                BOOST_LOG_SEV(_logger, info) << "REMOTE: " << _message.name << " " << inet_ntoa(_message.footer.ipaddr) << " " << (int)(_message.options >> 4);
 #endif
-                fetchRemoteBuffer(_message.name, _message.footer.ipaddr, _message.header);
+                fetchRemoteBuffer(_message.name, _message.footer.ipaddr, _message.clientID, _message.options);
                 break;
             case DISCONNECT_LOCAL:
 #ifdef LOGGING_ENABLED
-                BOOST_LOG_SEV(_logger, info) << "REMOVE LOCAL LISTENER: " << _message.name << " " << (_message.header & 0x0F);
+                BOOST_LOG_SEV(_logger, info) << "REMOVE LOCAL LISTENER: " << _message.name << " " << (int)_message.clientID;
 #endif
-                disconnectLocal(_message.name, _message.header);
+                disconnectLocal(_message.name, _message.clientID);
                 break;
             case DISCONNECT_REMOTE:
 #ifdef LOGGING_ENABLED
-                BOOST_LOG_SEV(_logger, info) << "REMOVE REMOTE LISTENER: " << _message.name << " " << (_message.header & 0x0F);
+                BOOST_LOG_SEV(_logger, info) << "REMOVE REMOTE LISTENER: " << _message.name << " " << (int)_message.clientID;
 #endif
-                disconnectRemote(_message.name, _message.footer.ipaddr, _message.header);
+                disconnectRemote(_message.name, _message.footer.ipaddr, _message.clientID, _message.options);
                 break;
             case DISCONNECT_CLIENT:
 #ifdef LOGGING_ENABLED
-                BOOST_LOG_SEV(_logger, info) << "CLIENT DISCONNECTED: " << (_message.header & 0x0F);
+                BOOST_LOG_SEV(_logger, info) << "CLIENT DISCONNECTED: " << (int)_message.clientID;
 #endif
-                disconnectClient(_message.header);
+                disconnectClient(_message.clientID);
                 break;
             default:
 #ifdef LOGGING_ENABLED
@@ -149,7 +149,6 @@ void dsm::Server::start() {
 #endif
                 break;
         }
-        _message.reset();
     }
 #ifdef LOGGING_ENABLED
     BOOST_LOG_SEV(_logger, teardown) << "MAIN LOOP END";
@@ -166,20 +165,19 @@ void dsm::Server::stop() {
     _messageQueue.send(0, 0, 0);
 }
 
-void dsm::Server::createLocalBuffer(LocalBufferKey key, uint16_t size, uint16_t header, bool localOnly) {
+void dsm::Server::createLocalBuffer(LocalBufferKey key, uint16_t size, uint8_t clientID, bool localOnly) {
 #ifdef LOGGING_ENABLED
     BOOST_LOG_SEV(_logger, trace) << "CREATING LOCAL BUFFER: " << key;
 #endif
-    uint8_t clientID = header & 0x0F;
     interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     if (_localBufferMap->find(key) != _localBufferMap->end()) {
         _localBufferLocalListeners[key].insert(clientID);
         _clientSubscriptions[clientID].first.insert(key);
         return;
     } else {
-        if (!localOnly && _multicastPortOffsets[clientID] > MAX_BUFFERS_PER_CLIENT-1) {
+        if (!localOnly && _multicastPortOffsets[clientID] >= MAX_BUFFERS_PER_CLIENT) {
 #ifdef LOGGING_ENABLED
-            BOOST_LOG_SEV(_logger, severity_levels::error) << "CLIENT " << clientID << " HAS TOO MANY LOCAL BUFFERS";
+            BOOST_LOG_SEV(_logger, severity_levels::error) << "CLIENT " << (int)clientID << " HAS TOO MANY LOCAL BUFFERS";
 #endif
             return;
         }
@@ -217,11 +215,10 @@ void dsm::Server::createRemoteBuffer(RemoteBufferKey key, uint16_t size) {
     _remoteBufferMap->insert(std::make_pair(key, std::make_tuple(handle, size, mutex)));
 }
 
-void dsm::Server::fetchRemoteBuffer(std::string name, struct in_addr addr, uint16_t header) {
-    uint8_t clientID = header & 0x0F;
+void dsm::Server::fetchRemoteBuffer(std::string name, struct in_addr addr, uint8_t clientID, uint8_t options) {
     //TODO There must be a better way to translate the ipaddr
     std::string ipaddr = inet_ntoa(addr);
-    uint8_t portOffset = (header >> 8) & 0x0F;
+    uint8_t portOffset = (options >> 4);
     ip::udp::endpoint endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset);
     RemoteBufferKey key(name, endpoint);
 #ifdef LOGGING_ENABLED
@@ -240,8 +237,7 @@ void dsm::Server::fetchRemoteBuffer(std::string name, struct in_addr addr, uint1
     _remoteBuffersToFetch.insert(key);
 }
 
-void dsm::Server::disconnectLocal(std::string name, uint16_t header) {
-    uint8_t clientID = header & 0x0F;
+void dsm::Server::disconnectLocal(std::string name, uint8_t clientID) {
     _localBufferLocalListeners[name].erase(clientID);
     _clientSubscriptions[clientID].first.erase(name);
     if (_localBufferLocalListeners[name].empty()) {
@@ -249,10 +245,9 @@ void dsm::Server::disconnectLocal(std::string name, uint16_t header) {
     }
 }
 
-void dsm::Server::disconnectRemote(std::string name, struct in_addr addr, uint16_t header) {
+void dsm::Server::disconnectRemote(std::string name, struct in_addr addr, uint8_t clientID, uint8_t options) {
     std::string ipaddr = inet_ntoa(addr);
-    uint8_t clientID = header & 0x0F;
-    uint8_t portOffset = (header >> 8) & 0x0F;
+    uint8_t portOffset = (options >> 4);
     RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
     _remoteBufferLocalListeners[key].erase(clientID);
     _clientSubscriptions[clientID].second.erase(key);
@@ -261,8 +256,7 @@ void dsm::Server::disconnectRemote(std::string name, struct in_addr addr, uint16
     }
 }
 
-void dsm::Server::disconnectClient(uint16_t header) {
-    uint8_t clientID = (header & 0x0F);
+void dsm::Server::disconnectClient(uint8_t clientID) {
     for (auto const &i : _clientSubscriptions[clientID].first) {
         _localBufferLocalListeners[i].erase(clientID);
         if (_localBufferLocalListeners[i].empty()) {

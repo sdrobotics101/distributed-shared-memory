@@ -38,17 +38,13 @@ namespace dsm {
             interprocess_sharable_mutex* _remoteBufferMapLock;
 
             struct QueueMessage {
-                uint16_t header;
+                uint8_t options;
+                uint8_t clientID;
                 char name[26];      //makes this struct 32 bytes
                 union footer {
                     uint16_t size;  //max buffer size will probably be smaller than max value of 16 bit int
                     struct in_addr ipaddr;
                 } footer;
-                void reset() {
-                    header = 0;
-                    strcpy(name, "");
-                    footer.size = 0;
-                }
             } _message;
     };
 }

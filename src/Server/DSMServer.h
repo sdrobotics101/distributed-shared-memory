@@ -38,8 +38,8 @@
 
 #define MULTICAST_BASE_PORT 30000
 
-#define MAX_CLIENTS 16
-#define MAX_BUFFERS_PER_CLIENT 64
+#define MAX_CLIENTS 128
+#define MAX_BUFFERS_PER_CLIENT 8
 
 #define SENDER_DELAY 10 //milliseconds
 
@@ -68,13 +68,13 @@ namespace dsm {
             void start();
             void stop();
         private:
-            void createLocalBuffer(LocalBufferKey key, uint16_t size, uint16_t header, bool localOnly);
+            void createLocalBuffer(LocalBufferKey key, uint16_t size, uint8_t clientID, bool localOnly);
             void createRemoteBuffer(RemoteBufferKey key, uint16_t size);
-            void fetchRemoteBuffer(std::string name, struct in_addr addr, uint16_t header);
+            void fetchRemoteBuffer(std::string name, struct in_addr addr, uint8_t clientID, uint8_t options);
 
-            void disconnectLocal(std::string name, uint16_t header);
-            void disconnectRemote(std::string name, struct in_addr addr, uint16_t header);
-            void disconnectClient(uint16_t header);
+            void disconnectLocal(std::string name, uint8_t clientID);
+            void disconnectRemote(std::string name, struct in_addr addr, uint8_t clientID, uint8_t options);
+            void disconnectClient(uint8_t clientID);
 
             void removeLocalBuffer(LocalBufferKey key);
             void removeRemoteBuffer(RemoteBufferKey key);
