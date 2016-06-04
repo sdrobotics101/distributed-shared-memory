@@ -100,9 +100,9 @@ void dsm::Server::start() {
     unsigned int priority;
     interprocess::message_queue::size_type receivedSize;
     while (_isRunning.load()) {
-        _messageQueue.receive(&_message, MESSAGE_SIZE, receivedSize, priority);
+        _messageQueue.receive(&_message, QUEUE_MESSAGE_SIZE, receivedSize, priority);
 
-        if (receivedSize != 32) {
+        if (receivedSize != QUEUE_MESSAGE_SIZE) {
             break;
         }
 

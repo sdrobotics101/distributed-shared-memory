@@ -40,7 +40,7 @@ namespace dsm {
             struct QueueMessage {
                 uint8_t options;
                 uint8_t clientID;
-                char name[26];      //makes this struct 32 bytes
+                char name[MAX_NAME_SIZE];      //makes this struct 32 bytes
                 union footer {
                     uint16_t size;  //max buffer size will probably be smaller than max value of 16 bit int
                     struct in_addr ipaddr;

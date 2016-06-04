@@ -10,20 +10,20 @@ dsm::Client::Client(uint8_t serverID, uint8_t clientID, bool reset) : Base("serv
     _message.clientID = _clientID;
     if (reset) {
         _message.options = DISCONNECT_CLIENT;
-        _messageQueue.send(&_message, MESSAGE_SIZE, 0);
+        _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
     }
 }
 
 dsm::Client::~Client() {
     _message.options = DISCONNECT_CLIENT;
-    _messageQueue.send(&_message, MESSAGE_SIZE, 0);
+    _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
 }
 
 bool dsm::Client::registerLocalBuffer(std::string name, uint16_t length, bool localOnly) {
     if (length < 1 || length > MAX_BUFFER_SIZE) {
         return false;
     }
-    if (name.length() > 26) {
+    if (name.length() > MAX_NAME_SIZE) {
         return false;
     }
     if (localOnly) {
@@ -34,7 +34,7 @@ bool dsm::Client::registerLocalBuffer(std::string name, uint16_t length, bool lo
     std::strcpy(_message.name, name.c_str());
     _message.footer.size = length;
 
-    _messageQueue.send(&_message, MESSAGE_SIZE, 0);
+    _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
     return true;
 }
 
@@ -42,7 +42,7 @@ bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uin
     if (portOffset < 0 || portOffset > 15) {
         return false;
     }
-    if (name.length() > 26) {
+    if (name.length() > MAX_NAME_SIZE) {
         return false;
     }
     if (inet_aton(ipaddr.c_str(), &_message.footer.ipaddr) == 0) {
@@ -54,20 +54,20 @@ bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uin
 
     std::strcpy(_message.name, name.c_str());
 
-    _messageQueue.send(&_message, MESSAGE_SIZE, 0);
+    _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
     return true;
 }
 
 
 bool dsm::Client::disconnectFromLocalBuffer(std::string name) {
-    if (name.length() > 26) {
+    if (name.length() > MAX_NAME_SIZE) {
         return false;
     }
 
     _message.options = DISCONNECT_LOCAL;
     std::strcpy(_message.name, name.c_str());
 
-    _messageQueue.send(&_message, MESSAGE_SIZE, 0);
+    _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
     return true;
 }
 
@@ -75,7 +75,7 @@ bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipadd
     if (portOffset < 0 || portOffset > 15) {
         return false;
     }
-    if (name.length() > 26) {
+    if (name.length() > MAX_NAME_SIZE) {
         return false;
     }
     if (inet_aton(ipaddr.c_str(), &_message.footer.ipaddr) == 0) {
@@ -86,7 +86,7 @@ bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipadd
     _message.options |= (portOffset << 4);
     std::strcpy(_message.name, name.c_str());
 
-    _messageQueue.send(&_message, MESSAGE_SIZE, 0);
+    _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
     return true;
 }
 
