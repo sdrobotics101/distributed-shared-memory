@@ -22,8 +22,6 @@ std::ostream& operator<<(std::ostream& stream, severity_levels level)
 }
 #endif
 
-void nullDelete(std::ostream*) {}
-
 dsm::Server::Server(uint8_t serverID) : Base("server"+std::to_string(serverID)),
                                         _isRunning(false),
                                         _serverID(serverID),
@@ -40,7 +38,7 @@ dsm::Server::Server(uint8_t serverID) : Base("server"+std::to_string(serverID)),
 
     typedef logging::sinks::synchronous_sink<logging::sinks::text_ostream_backend> text_sink;
     boost::shared_ptr<text_sink> sink = boost::make_shared<text_sink>();
-    boost::shared_ptr<std::ostream> stream(&std::clog, nullDelete);
+    boost::shared_ptr<std::ostream> stream(&std::clog, boost::empty_deleter());
     sink->locked_backend()->add_stream(stream);
     sink->set_formatter(format);
     logging::core::get()->add_sink(sink);
