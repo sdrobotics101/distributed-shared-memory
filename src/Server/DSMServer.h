@@ -90,7 +90,7 @@ namespace dsm {
             void sendHandler(const boost::system::error_code&, std::size_t);
 
             void processRequest(ip::udp::endpoint remoteEndpoint);
-            void processACK(ip::udp::endpoint remoteEndpoint);
+            void processACK(ip::udp::endpoint remoteEndpoint, bool localOnly);
             void processData(const boost::system::error_code &error, size_t bytesReceived, RemoteBufferKey key, ip::udp::socket* sock, ip::udp::endpoint sender);
 
             void senderThreadFunction();

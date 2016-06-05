@@ -293,23 +293,24 @@ void dsm::Server::sendACKs() {
         if  (iterator == _localBufferMap->end()) {
             continue;
         }
+        boost::array<char, MAX_NAME_SIZE+11> sendBuffer;
         uint16_t multicastPort = std::get<3>(iterator->second).port();
         if (multicastPort == 0) {
             //TODO? specific code to tell remote that buffer is local only
             LOG(_logger, severity_levels::error) << "BUFFER " << i.first << " IS LOCAL ONLY";
-            continue;
-        }
-        uint16_t len = std::get<1>(iterator->second);
-        uint32_t multicastAddress = std::get<3>(iterator->second).address().to_v4().to_ulong();
+            sendBuffer[0] = 2; //so the other servers know this is local only
+        } else {
+            uint16_t len = std::get<1>(iterator->second);
+            uint32_t multicastAddress = std::get<3>(iterator->second).address().to_v4().to_ulong();
 
-        boost::array<char, MAX_NAME_SIZE+11> sendBuffer;
-        sendBuffer[0] = 1; //so we know it's an ACK
+            sendBuffer[0] = 1; //so we know it's an ACK
+            //TODO array indices are correct but seem sketch
+            memcpy(&sendBuffer[3], &len, sizeof(len));
+            memcpy(&sendBuffer[5], &multicastAddress, sizeof(multicastAddress));
+            memcpy(&sendBuffer[9], &multicastPort, sizeof(multicastPort));
+        }
         sendBuffer[1] = _serverID;
         sendBuffer[2] = i.first.length();
-        //TODO array indices are correct but seem sketch
-        memcpy(&sendBuffer[3], &len, sizeof(len));
-        memcpy(&sendBuffer[5], &multicastAddress, sizeof(multicastAddress));
-        memcpy(&sendBuffer[9], &multicastPort, sizeof(multicastPort));
         strcpy(&sendBuffer[11], i.first.c_str());
         for (auto const &j : i.second) {
             LOG(_logger, trace) << "SENDING ACK " << i.first << " TO " << j.address().to_v4().to_string() << " " << j.port();
@@ -366,7 +367,7 @@ void dsm::Server::processRequest(ip::udp::endpoint remoteEndpoint) {
 #endif
 }
 
-void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint) {
+void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
     std::string name(&_receiveBuffer[11], _receiveBuffer[2]);
     remoteEndpoint.port(RECEIVER_BASE_PORT+(uint8_t)_receiveBuffer[1]);
     RemoteBufferKey key(name, remoteEndpoint);
@@ -379,6 +380,10 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint) {
         //delete entry if true and continue
         boost::unique_lock<boost::shared_mutex> lock(_remoteBuffersToFetchMutex);
         _remoteBuffersToFetch.erase(key);
+        if (localOnly) {
+            LOG(_logger, info) << "BUFFER " << key << " IS MARKED LOCAL ONLY";
+            return;
+        }
     }
     {
         //get the buffer length and create it
@@ -472,7 +477,10 @@ void dsm::Server::receiverThreadFunction() {
                 processRequest(remoteEndpoint);
                 break;
             case 1:
-                processACK(remoteEndpoint);
+                processACK(remoteEndpoint, false);
+                break;
+            case 2:
+                processACK(remoteEndpoint, true);
                 break;
             default:
             LOG(_logger, info) << "IGNORING PACKET";
