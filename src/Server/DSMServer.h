@@ -23,7 +23,6 @@
 #include <boost/log/sources/record_ostream.hpp>
 #include <boost/log/sinks/sync_frontend.hpp>
 #include <boost/log/sinks/text_ostream_backend.hpp>
-#include <boost/core/null_deleter.hpp>
 #endif
 
 #include <boost/interprocess/managed_shared_memory.hpp>

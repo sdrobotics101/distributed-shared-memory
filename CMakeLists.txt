@@ -32,7 +32,7 @@ else()
 endif()
 
 if(Boost_PYTHON_FOUND)
-    find_package(PythonLibs 3.5 REQUIRED)
+    find_package(PythonLibs 3.4 REQUIRED)
     set(PROJECT_PYTHON_MODULE_NAME pydsm)
     add_library(${PROJECT_PYTHON_MODULE_NAME} MODULE ${SHARED_SOURCES} ${CLIENT_SOURCES})
     target_compile_definitions(${PROJECT_PYTHON_MODULE_NAME} PUBLIC BUILD_PYTHON_MODULE)
