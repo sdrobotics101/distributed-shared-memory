@@ -183,7 +183,6 @@ void dsm::Server::createRemoteBuffer(RemoteBufferKey key, uint16_t size) {
 }
 
 void dsm::Server::fetchRemoteBuffer(std::string name, uint32_t addr, uint8_t clientID, uint8_t serverID) {
-    //TODO There must be a better way to translate the ipaddr
     ip::udp::endpoint endpoint(ip::address_v4(addr), RECEIVER_BASE_PORT+serverID);
     RemoteBufferKey key(name, endpoint);
     LOG(_logger, trace) << "FETCHING REMOTE BUFFER: " << key;
@@ -296,7 +295,6 @@ void dsm::Server::sendACKs() {
         boost::array<char, MAX_NAME_SIZE+11> sendBuffer;
         uint16_t multicastPort = std::get<3>(iterator->second).port();
         if (multicastPort == 0) {
-            //TODO? specific code to tell remote that buffer is local only
             LOG(_logger, severity_levels::error) << "BUFFER " << i.first << " IS LOCAL ONLY";
             sendBuffer[0] = 2; //so the other servers know this is local only
         } else {

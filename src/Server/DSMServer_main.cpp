@@ -41,8 +41,8 @@ int main(int argc, char** argv) {
             return 0;
         }
 
-        if (serverID < 0 || serverID > 255) {
-            std::cout << "Server ID must be between 0 and 255" << std::endl;
+        if (serverID < 0 || serverID >= MAX_SERVERS) {
+            std::cout << "Server ID must be between 0 and " << MAX_SERVERS-1 << std::endl;
             return 0;
         }
 

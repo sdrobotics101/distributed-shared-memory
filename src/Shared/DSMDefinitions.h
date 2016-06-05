@@ -23,6 +23,13 @@
 #define INITIAL_NUM_BUCKETS 8
 
 #define RECEIVER_BASE_PORT 8888
+#define MULTICAST_BASE_PORT 30000
+
+#define MAX_SERVERS 256
+#define MAX_CLIENTS 256
+#define MAX_BUFFERS_PER_CLIENT 8
+
+#define SENDER_DELAY 10 //milliseconds
 
 //message type codes
 #define CREATE_LOCAL 0

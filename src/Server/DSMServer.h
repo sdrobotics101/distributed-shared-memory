@@ -35,13 +35,6 @@
 #include "../Shared/DSMDefinitions.h"
 #include "../Shared/DSMBase.h"
 
-#define MULTICAST_BASE_PORT 30000
-
-#define MAX_CLIENTS 256
-#define MAX_BUFFERS_PER_CLIENT 8
-
-#define SENDER_DELAY 10 //milliseconds
-
 #ifdef LOGGING_ENABLED
 namespace logging = boost::log;
 
@@ -116,10 +109,10 @@ namespace dsm {
             boost::unordered_map<RemoteBufferKey, std::pair<boost::shared_array<char>, uint16_t>> _remoteReceiveBuffers;
 
             //map from local buffer name to client IDs of listeners
-            boost::unordered_map<LocalBufferKey, std::set<uint8_t>> _localBufferLocalListeners;
+            boost::unordered_map<LocalBufferKey, boost::unordered_set<uint8_t>> _localBufferLocalListeners;
 
             //map from remote buffer to client IDs of local listeners
-            boost::unordered_map<RemoteBufferKey, std::set<uint8_t>> _remoteBufferLocalListeners;
+            boost::unordered_map<RemoteBufferKey, boost::unordered_set<uint8_t>> _remoteBufferLocalListeners;
 
             //map from client ID to list of local and remote buffers subscribed to
             boost::unordered_map<uint8_t, std::pair<boost::unordered_set<LocalBufferKey>, boost::unordered_set<RemoteBufferKey>>> _clientSubscriptions;
