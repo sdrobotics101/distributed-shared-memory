@@ -58,6 +58,12 @@ enum severity_levels {
 BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", severity_levels);
 #endif
 
+#ifdef LOGGING_ENABLED
+#define LOG(x,y) BOOST_LOG_SEV(x,y)
+#else
+#define LOG(x,y) std::ostream(0)
+#endif
+
 namespace dsm {
     class Server : public Base {
         public:
