@@ -37,7 +37,7 @@
 
 #define MULTICAST_BASE_PORT 30000
 
-#define MAX_CLIENTS 128
+#define MAX_CLIENTS 256
 #define MAX_BUFFERS_PER_CLIENT 8
 
 #define SENDER_DELAY 10 //milliseconds
@@ -61,7 +61,7 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(severity, "Severity", severity_levels);
 namespace dsm {
     class Server : public Base {
         public:
-            Server(uint8_t portOffset);
+            Server(uint8_t serverID);
             virtual ~Server();
 
             void start();
@@ -69,10 +69,10 @@ namespace dsm {
         private:
             void createLocalBuffer(LocalBufferKey key, uint16_t size, uint8_t clientID, bool localOnly);
             void createRemoteBuffer(RemoteBufferKey key, uint16_t size);
-            void fetchRemoteBuffer(std::string name, uint32_t addr, uint8_t clientID, uint8_t options);
+            void fetchRemoteBuffer(std::string name, uint32_t addr, uint8_t clientID, uint8_t serverID);
 
             void disconnectLocal(std::string name, uint8_t clientID);
-            void disconnectRemote(std::string name, uint32_t addr, uint8_t clientID, uint8_t options);
+            void disconnectRemote(std::string name, uint32_t addr, uint8_t clientID, uint8_t serverID);
             void disconnectClient(uint8_t clientID);
 
             void removeLocalBuffer(LocalBufferKey key);
@@ -95,9 +95,8 @@ namespace dsm {
             boost::scoped_ptr<boost::thread> _receiverThread;
             boost::scoped_ptr<boost::thread> _handlerThread;
 
-            uint8_t _portOffset;
+            uint8_t _serverID;
             ip::address _multicastAddress;
-            uint16_t _multicastBasePort;
             uint8_t _multicastPortOffsets[MAX_CLIENTS];
 
             asio::io_service _ioService;

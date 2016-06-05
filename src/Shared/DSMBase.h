@@ -38,6 +38,7 @@ namespace dsm {
 
             struct QueueMessage {
                 uint8_t options;
+                uint8_t serverID;
                 uint8_t clientID;
                 char name[MAX_NAME_SIZE];      //makes this struct 32 bytes
                 union footer {

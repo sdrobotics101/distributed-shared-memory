@@ -17,12 +17,12 @@
 #define SEGMENT_SIZE 65536
 #define MAX_BUFFER_SIZE 1024
 
-#define MAX_NUM_MESSAGES 10
+#define MAX_NUM_MESSAGES 16
 #define QUEUE_MESSAGE_SIZE 32
-#define MAX_NAME_SIZE 26
-#define INITIAL_NUM_BUCKETS 10
+#define MAX_NAME_SIZE 25
+#define INITIAL_NUM_BUCKETS 8
 
-#define REQUEST_BASE_PORT 8888
+#define RECEIVER_BASE_PORT 8888
 
 //message type codes
 #define CREATE_LOCAL 0
@@ -53,7 +53,7 @@ struct RemoteBufferKey {
                x.endpoint.port() == y.endpoint.port());
     }
     friend std::ostream& operator<<(std::ostream& stream, const RemoteBufferKey& x) {
-        stream << "{" << x.name << ", " << x.endpoint.address().to_v4().to_string() << ", " << x.endpoint.port()-REQUEST_BASE_PORT << "}";
+        stream << "{" << x.name << ", " << x.endpoint.address().to_v4().to_string() << ", " << x.endpoint.port()-RECEIVER_BASE_PORT << "}";
         return stream;
     }
     const std::string name;

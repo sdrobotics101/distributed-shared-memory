@@ -4,9 +4,8 @@
 #include "DSMClientPython.h"
 #endif
 
-dsm::Client::Client(uint8_t serverID, uint8_t clientID, bool reset) : Base("server"+std::to_string((serverID < 0 || serverID > 15) ? 0 : serverID)),
+dsm::Client::Client(uint8_t serverID, uint8_t clientID, bool reset) : Base("server"+std::to_string(serverID)),
                                                                       _clientID(clientID) {
-    _clientID &= 0x7F;  //use only the lowest 7 bits
     _message.clientID = _clientID;
     if (reset) {
         _message.options = DISCONNECT_CLIENT;
@@ -38,10 +37,7 @@ bool dsm::Client::registerLocalBuffer(std::string name, uint16_t length, bool lo
     return true;
 }
 
-bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uint8_t portOffset) {
-    if (portOffset < 0 || portOffset > 15) {
-        return false;
-    }
+bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uint8_t serverID) {
     if (name.length() > MAX_NAME_SIZE) {
         return false;
     }
@@ -52,7 +48,7 @@ bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uin
     }
 
     _message.options = FETCH_REMOTE;
-    _message.options |= (portOffset << 4);
+    _message.serverID = serverID;
 
     std::strcpy(_message.name, name.c_str());
 
@@ -73,10 +69,7 @@ bool dsm::Client::disconnectFromLocalBuffer(std::string name) {
     return true;
 }
 
-bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipaddr, uint8_t portOffset) {
-    if (portOffset < 0 || portOffset > 15) {
-        return false;
-    }
+bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipaddr, uint8_t serverID) {
     if (name.length() > MAX_NAME_SIZE) {
         return false;
     }
@@ -87,7 +80,7 @@ bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipadd
     }
 
     _message.options = DISCONNECT_REMOTE;
-    _message.options |= (portOffset << 4);
+    _message.serverID = serverID;
     std::strcpy(_message.name, name.c_str());
 
     _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
@@ -99,9 +92,9 @@ bool dsm::Client::doesLocalExist(std::string name) {
     return (bool)_localBufferMap->count(name);
 }
 
-bool dsm::Client::doesRemoteExist(std::string name, std::string ipaddr, uint8_t portOffset) {
+bool dsm::Client::doesRemoteExist(std::string name, std::string ipaddr, uint8_t serverID) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
-    RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
+    RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
     return (bool)_remoteBufferMap->count(key);
 }
 
@@ -156,9 +149,9 @@ bool dsm::Client::setLocalBufferContents(std::string name, std::string data) {
     return true;
 }
 
-bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t portOffset, void* data) {
+bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID, void* data) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
-    RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
+    RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
         return false;
@@ -170,9 +163,9 @@ bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, 
     return true;
 }
 
-std::string dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t portOffset) {
+std::string dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
-    RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), REQUEST_BASE_PORT+portOffset));
+    RemoteBufferKey key(name, ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
         return "";

@@ -22,14 +22,13 @@ std::ostream& operator<<(std::ostream& stream, severity_levels level)
 }
 #endif
 
-dsm::Server::Server(uint8_t portOffset) : Base("server"+std::to_string((portOffset < 0 || portOffset > 15) ? 0 : portOffset)),
-                                          _isRunning(false),
-                                          _portOffset((portOffset < 0 || portOffset > 15) ? 0 : portOffset),
-                                          _multicastAddress(ip::address::from_string("239.255.0."+std::to_string(portOffset))),
-                                          _multicastBasePort(MULTICAST_BASE_PORT+(portOffset*MAX_CLIENTS*MAX_BUFFERS_PER_CLIENT)),
-                                          _work(_ioService),
-                                          _senderSocket(_ioService, ip::udp::v4()),
-                                          _receiverSocket(_ioService, ip::udp::endpoint(ip::udp::v4(), REQUEST_BASE_PORT+_portOffset))
+dsm::Server::Server(uint8_t serverID) : Base("server"+std::to_string(serverID)),
+                                        _isRunning(false),
+                                        _serverID(serverID),
+                                        _multicastAddress(ip::address::from_string("239.255.0."+std::to_string(serverID))),
+                                        _work(_ioService),
+                                        _senderSocket(_ioService, ip::udp::v4()),
+                                        _receiverSocket(_ioService, ip::udp::endpoint(ip::udp::v4(), RECEIVER_BASE_PORT+_serverID))
 {
 #ifdef LOGGING_ENABLED
     logging::formatter format = logging::expressions::stream <<
@@ -106,7 +105,7 @@ void dsm::Server::start() {
             break;
         }
 
-        switch((_message.options & 0x0F)) {
+        switch(_message.options) {
             case CREATE_LOCAL:
 #ifdef LOGGING_ENABLED
                 BOOST_LOG_SEV(_logger, info) << "LOCAL: " << _message.name << " " << _message.footer.size << " " << (int)_message.clientID;
@@ -121,9 +120,9 @@ void dsm::Server::start() {
                 break;
             case FETCH_REMOTE:
 #ifdef LOGGING_ENABLED
-                BOOST_LOG_SEV(_logger, info) << "REMOTE: " << _message.name << " " << ip::address_v4(_message.footer.ipaddr) << " " << (int)(_message.options >> 4);
+                BOOST_LOG_SEV(_logger, info) << "REMOTE: " << _message.name << " " << ip::address_v4(_message.footer.ipaddr) << " " << (int)_message.serverID;
 #endif
-                fetchRemoteBuffer(_message.name, _message.footer.ipaddr, _message.clientID, _message.options);
+                fetchRemoteBuffer(_message.name, _message.footer.ipaddr, _message.clientID, _message.serverID);
                 break;
             case DISCONNECT_LOCAL:
 #ifdef LOGGING_ENABLED
@@ -135,7 +134,7 @@ void dsm::Server::start() {
 #ifdef LOGGING_ENABLED
                 BOOST_LOG_SEV(_logger, info) << "REMOVE REMOTE LISTENER: " << _message.name << " " << (int)_message.clientID;
 #endif
-                disconnectRemote(_message.name, _message.footer.ipaddr, _message.clientID, _message.options);
+                disconnectRemote(_message.name, _message.footer.ipaddr, _message.clientID, _message.serverID);
                 break;
             case DISCONNECT_CLIENT:
 #ifdef LOGGING_ENABLED
@@ -161,7 +160,7 @@ void dsm::Server::stop() {
 #endif
     _isRunning = false;
     uint8_t ignorePacket = -1;
-    _senderSocket.send_to(asio::buffer(&ignorePacket, 1), ip::udp::endpoint(ip::address::from_string("127.0.0.1"), REQUEST_BASE_PORT+_portOffset));
+    _senderSocket.send_to(asio::buffer(&ignorePacket, 1), ip::udp::endpoint(ip::address::from_string("127.0.0.1"), RECEIVER_BASE_PORT+_serverID));
     _messageQueue.send(0, 0, 0);
 }
 
@@ -193,7 +192,7 @@ void dsm::Server::createLocalBuffer(LocalBufferKey key, uint16_t size, uint8_t c
     new (mutex.get()) interprocess_sharable_mutex;
     ip::udp::endpoint endpoint(_multicastAddress, 0);
     if (!localOnly) {
-        endpoint.port(_multicastBasePort+(clientID * MAX_BUFFERS_PER_CLIENT)+_multicastPortOffsets[clientID]);
+        endpoint.port(MULTICAST_BASE_PORT+(clientID * MAX_BUFFERS_PER_CLIENT)+_multicastPortOffsets[clientID]);
         _multicastPortOffsets[clientID]++;
     }
     _localBufferMap->insert(std::make_pair(key, std::make_tuple(handle, size, mutex, endpoint)));
@@ -213,10 +212,9 @@ void dsm::Server::createRemoteBuffer(RemoteBufferKey key, uint16_t size) {
     _remoteBufferMap->insert(std::make_pair(key, std::make_tuple(handle, size, mutex)));
 }
 
-void dsm::Server::fetchRemoteBuffer(std::string name, uint32_t addr, uint8_t clientID, uint8_t options) {
+void dsm::Server::fetchRemoteBuffer(std::string name, uint32_t addr, uint8_t clientID, uint8_t serverID) {
     //TODO There must be a better way to translate the ipaddr
-    uint8_t portOffset = (options >> 4);
-    ip::udp::endpoint endpoint(ip::address_v4(addr), REQUEST_BASE_PORT+portOffset);
+    ip::udp::endpoint endpoint(ip::address_v4(addr), RECEIVER_BASE_PORT+serverID);
     RemoteBufferKey key(name, endpoint);
 #ifdef LOGGING_ENABLED
     BOOST_LOG_SEV(_logger, trace) << "FETCHING REMOTE BUFFER: " << key;
@@ -242,9 +240,8 @@ void dsm::Server::disconnectLocal(std::string name, uint8_t clientID) {
     }
 }
 
-void dsm::Server::disconnectRemote(std::string name, uint32_t addr, uint8_t clientID, uint8_t options) {
-    uint8_t portOffset = (options >> 4);
-    RemoteBufferKey key(name, ip::udp::endpoint(ip::address_v4(addr), REQUEST_BASE_PORT+portOffset));
+void dsm::Server::disconnectRemote(std::string name, uint32_t addr, uint8_t clientID, uint8_t serverID) {
+    RemoteBufferKey key(name, ip::udp::endpoint(ip::address_v4(addr), RECEIVER_BASE_PORT+serverID));
     _remoteBufferLocalListeners[key].erase(clientID);
     _clientSubscriptions[clientID].second.erase(key);
     if (_remoteBufferLocalListeners[key].empty()) {
@@ -312,10 +309,11 @@ void dsm::Server::sendRequests() {
 #ifdef LOGGING_ENABLED
         BOOST_LOG_SEV(_logger, trace) << "SENDING REQUEST " << i;
 #endif
-        boost::array<char, 28> sendBuffer;
-        sendBuffer[0] = _portOffset;    //so the server knows who to ACK
-        sendBuffer[1] = i.name.length();
-        std::strcpy(&sendBuffer[2], i.name.c_str());
+        boost::array<char, MAX_NAME_SIZE+3> sendBuffer;
+        sendBuffer[0] = 0;  //so the server knows it's a request
+        sendBuffer[1] = _serverID;    //so the server knows who to ACK
+        sendBuffer[2] = i.name.length();
+        std::strcpy(&sendBuffer[3], i.name.c_str());
         _senderSocket.async_send_to(asio::buffer(sendBuffer),
                                     i.endpoint,
                                     boost::bind(&dsm::Server::sendHandler,
@@ -344,15 +342,15 @@ void dsm::Server::sendACKs() {
         uint16_t len = std::get<1>(iterator->second);
         uint32_t multicastAddress = std::get<3>(iterator->second).address().to_v4().to_ulong();
 
-        boost::array<char, 36> sendBuffer;
-        sendBuffer[0] = _portOffset;
-        sendBuffer[0] |= 0x80;  //so we know it's an ACK
-        sendBuffer[1] = i.first.length();
+        boost::array<char, MAX_NAME_SIZE+11> sendBuffer;
+        sendBuffer[0] = 1; //so we know it's an ACK
+        sendBuffer[1] = _serverID;
+        sendBuffer[2] = i.first.length();
         //TODO array indices are correct but seem sketch
-        memcpy(&sendBuffer[2], &len, sizeof(len));
-        memcpy(&sendBuffer[4], &multicastAddress, sizeof(multicastAddress));
-        memcpy(&sendBuffer[8], &multicastPort, sizeof(multicastPort));
-        strcpy(&sendBuffer[10], i.first.c_str());
+        memcpy(&sendBuffer[3], &len, sizeof(len));
+        memcpy(&sendBuffer[5], &multicastAddress, sizeof(multicastAddress));
+        memcpy(&sendBuffer[9], &multicastPort, sizeof(multicastPort));
+        strcpy(&sendBuffer[11], i.first.c_str());
         for (auto const &j : i.second) {
 #ifdef LOGGING_ENABLED
             BOOST_LOG_SEV(_logger, trace) << "SENDING ACK " << i.first << " TO " << j.address().to_v4().to_string() << " " << j.port();
@@ -396,8 +394,8 @@ void dsm::Server::sendData() {
 void dsm::Server::sendHandler(const boost::system::error_code&, std::size_t) {}
 
 void dsm::Server::processRequest(ip::udp::endpoint remoteEndpoint) {
-    std::string name(&_receiveBuffer[2], (uint8_t)_receiveBuffer[1]);
-    remoteEndpoint.port(REQUEST_BASE_PORT+_receiveBuffer[0]);
+    std::string name(&_receiveBuffer[3], (uint8_t)_receiveBuffer[2]);
+    remoteEndpoint.port(RECEIVER_BASE_PORT+(uint8_t)_receiveBuffer[1]);
 #ifdef LOGGING_ENABLED
     BOOST_LOG_SEV(_logger, info) << "RECEIVED REQUEST FOR " << name << " FROM " << remoteEndpoint.address().to_string() << " " << remoteEndpoint.port();
 #endif
@@ -415,8 +413,8 @@ void dsm::Server::processRequest(ip::udp::endpoint remoteEndpoint) {
 }
 
 void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint) {
-    std::string name(&_receiveBuffer[10], _receiveBuffer[1]);
-    remoteEndpoint.port(REQUEST_BASE_PORT+(_receiveBuffer[0] & 0x0F));
+    std::string name(&_receiveBuffer[11], _receiveBuffer[2]);
+    remoteEndpoint.port(RECEIVER_BASE_PORT+(uint8_t)_receiveBuffer[1]);
     RemoteBufferKey key(name, remoteEndpoint);
     {
         //check if <name, addr, port> exists in remotes to create
@@ -433,16 +431,16 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint) {
     {
         //get the buffer length and create it
         uint16_t buflen;
-        memcpy(&buflen, &_receiveBuffer[2], sizeof(uint16_t));
+        memcpy(&buflen, &_receiveBuffer[3], sizeof(uint16_t));
         createRemoteBuffer(key, buflen);
         _remoteReceiveBuffers.insert(std::make_pair(key, std::make_pair(boost::shared_array<char>(new char[buflen]), buflen)));
     }
     {
         //create socket and start handler
         uint32_t mcastaddr;
-        memcpy(&mcastaddr, &_receiveBuffer[4], sizeof(mcastaddr));
+        memcpy(&mcastaddr, &_receiveBuffer[5], sizeof(mcastaddr));
         uint16_t mcastport;
-        memcpy(&mcastport, &_receiveBuffer[8], sizeof(mcastport));
+        memcpy(&mcastport, &_receiveBuffer[9], sizeof(mcastport));
 
         boost::shared_ptr<ip::udp::socket> sock(new ip::udp::socket(_ioService));
         ip::udp::endpoint listenEndpoint(ip::address_v4::from_string("0.0.0.0"), mcastport);
@@ -534,19 +532,19 @@ void dsm::Server::receiverThreadFunction() {
 #ifdef LOGGING_ENABLED
         BOOST_LOG_SEV(_logger, periodic) << "RECEIVER GOT PACKET";
 #endif
-        if (_receiveBuffer[0] == -1) {
+
+        switch (_receiveBuffer[0]) {
+            case 0:
+                processRequest(remoteEndpoint);
+                break;
+            case 1:
+                processACK(remoteEndpoint);
+                break;
+            default:
 #ifdef LOGGING_ENABLED
             BOOST_LOG_SEV(_logger, info) << "IGNORING PACKET";
 #endif
             continue;
-        }
-
-        if (_receiveBuffer[0] >= 0) {
-            processRequest(remoteEndpoint);
-        }
-
-        if (_receiveBuffer[0] < 0) {
-            processACK(remoteEndpoint);
         }
     }
 #ifdef LOGGING_ENABLED

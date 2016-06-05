@@ -21,13 +21,13 @@ namespace dsm {
             virtual ~Client();
 
             bool registerLocalBuffer(std::string name, uint16_t length, bool localOnly);
-            bool registerRemoteBuffer(std::string name, std::string ipaddr, uint8_t portOffset);
+            bool registerRemoteBuffer(std::string name, std::string ipaddr, uint8_t serverID);
 
             bool disconnectFromLocalBuffer(std::string name);
-            bool disconnectFromRemoteBuffer(std::string name, std::string ipaddr, uint8_t portOffset);
+            bool disconnectFromRemoteBuffer(std::string name, std::string ipaddr, uint8_t serverID);
 
             bool doesLocalExist(std::string name);
-            bool doesRemoteExist(std::string name, std::string ipaddr, uint8_t portOffset);
+            bool doesRemoteExist(std::string name, std::string ipaddr, uint8_t serverID);
 
             bool getLocalBufferContents(std::string name, void* data);
             std::string getLocalBufferContents(std::string name);
@@ -35,8 +35,8 @@ namespace dsm {
             bool setLocalBufferContents(std::string name, const void* data);
             bool setLocalBufferContents(std::string name, std::string data);
 
-            bool getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t portOffset, void* data);
-            std::string getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t portOffset);
+            bool getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID, void* data);
+            std::string getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID);
         private:
             uint8_t _clientID;
     };
