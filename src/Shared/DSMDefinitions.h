@@ -68,7 +68,7 @@ struct RemoteBufferKey {
 };
 
 typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_sharable_mutex>, ip::udp::endpoint> LocalBuffer;
-typedef const std::string LocalBufferKey;
+typedef std::string LocalBufferKey;
 typedef std::pair<LocalBufferKey, LocalBuffer> MappedLocalBuffer;
 typedef interprocess::allocator<MappedLocalBuffer, interprocess::managed_shared_memory::segment_manager> LocalBufferAllocator;
 typedef boost::unordered_map<LocalBufferKey, LocalBuffer, boost::hash<LocalBufferKey>, std::equal_to<LocalBufferKey>, LocalBufferAllocator> LocalBufferMap;
