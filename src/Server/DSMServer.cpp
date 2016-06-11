@@ -182,7 +182,7 @@ void dsm::Server::createRemoteBuffer(RemoteBufferKey key, uint16_t size) {
     _remoteBufferMap->insert(std::make_pair(key, std::make_tuple(handle, size, mutex)));
 }
 
-void dsm::Server::fetchRemoteBuffer(std::string name, uint32_t addr, uint8_t clientID, uint8_t serverID) {
+void dsm::Server::fetchRemoteBuffer(BufferName name, uint32_t addr, uint8_t clientID, uint8_t serverID) {
     ip::udp::endpoint endpoint(ip::address_v4(addr), RECEIVER_BASE_PORT+serverID);
     RemoteBufferKey key(name, endpoint);
     LOG(_logger, trace) << "FETCHING REMOTE BUFFER: " << key;
@@ -199,7 +199,7 @@ void dsm::Server::fetchRemoteBuffer(std::string name, uint32_t addr, uint8_t cli
     _remoteBuffersToFetch.insert(key);
 }
 
-void dsm::Server::disconnectLocal(std::string name, uint8_t clientID) {
+void dsm::Server::disconnectLocal(BufferName name, uint8_t clientID) {
     _localBufferLocalListeners[name].erase(clientID);
     _clientSubscriptions[clientID].first.erase(name);
     if (_localBufferLocalListeners[name].empty()) {
@@ -207,7 +207,7 @@ void dsm::Server::disconnectLocal(std::string name, uint8_t clientID) {
     }
 }
 
-void dsm::Server::disconnectRemote(std::string name, uint32_t addr, uint8_t clientID, uint8_t serverID) {
+void dsm::Server::disconnectRemote(BufferName name, uint32_t addr, uint8_t clientID, uint8_t serverID) {
     RemoteBufferKey key(name, ip::udp::endpoint(ip::address_v4(addr), RECEIVER_BASE_PORT+serverID));
     _remoteBufferLocalListeners[key].erase(clientID);
     _clientSubscriptions[clientID].second.erase(key);
@@ -273,8 +273,8 @@ void dsm::Server::sendRequests() {
         boost::array<char, MAX_NAME_SIZE+3> sendBuffer;
         sendBuffer[0] = 0;  //so the server knows it's a request
         sendBuffer[1] = _serverID;    //so the server knows who to ACK
-        sendBuffer[2] = i.name.length();
-        std::strcpy(&sendBuffer[3], i.name.c_str());
+        sendBuffer[2] = i.length;
+        std::strcpy(&sendBuffer[3], i.name);
         _senderSocket.async_send_to(asio::buffer(sendBuffer),
                                     i.endpoint,
                                     boost::bind(&dsm::Server::sendHandler,
@@ -308,8 +308,8 @@ void dsm::Server::sendACKs() {
             memcpy(&sendBuffer[9], &multicastPort, sizeof(multicastPort));
         }
         sendBuffer[1] = _serverID;
-        sendBuffer[2] = i.first.length();
-        strcpy(&sendBuffer[11], i.first.c_str());
+        sendBuffer[2] = i.first.length;
+        strcpy(&sendBuffer[11], i.first.name);
         for (auto const &j : i.second) {
             LOG(_logger, trace) << "SENDING ACK " << i.first << " TO " << j.address().to_v4().to_string() << " " << j.port();
             _senderSocket.async_send_to(asio::buffer(sendBuffer),
@@ -349,7 +349,7 @@ void dsm::Server::sendData() {
 void dsm::Server::sendHandler(const boost::system::error_code&, std::size_t) {}
 
 void dsm::Server::processRequest(ip::udp::endpoint remoteEndpoint) {
-    std::string name(&_receiveBuffer[3], (uint8_t)_receiveBuffer[2]);
+    LocalBufferKey name(&_receiveBuffer[3], (uint8_t)_receiveBuffer[2]);
     remoteEndpoint.port(RECEIVER_BASE_PORT+(uint8_t)_receiveBuffer[1]);
     LOG(_logger, info) << "RECEIVED REQUEST FOR " << name << " FROM " << remoteEndpoint.address().to_string() << " " << remoteEndpoint.port();
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
@@ -366,9 +366,8 @@ void dsm::Server::processRequest(ip::udp::endpoint remoteEndpoint) {
 }
 
 void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
-    std::string name(&_receiveBuffer[11], _receiveBuffer[2]);
     remoteEndpoint.port(RECEIVER_BASE_PORT+(uint8_t)_receiveBuffer[1]);
-    RemoteBufferKey key(name, remoteEndpoint);
+    RemoteBufferKey key(&_receiveBuffer[11], _receiveBuffer[2], remoteEndpoint);
     {
         //check if <name, addr, port> exists in remotes to create
         LOG(_logger, info) << "RECEIVED ACK FOR " << key;

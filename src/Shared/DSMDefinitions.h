@@ -1,5 +1,5 @@
-#ifndef DSMTYPEDEFS_H
-#define DSMTYPEDEFS_H
+#ifndef DSMDEFINITIONS_H
+#define DSMDEFINITIONS_H
 
 #include <string>
 #include <tuple>
@@ -7,12 +7,14 @@
 #include <functional>
 
 #include <boost/asio.hpp>
+#include <boost/array.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/offset_ptr.hpp>
 #include <boost/interprocess/sync/interprocess_sharable_mutex.hpp>
+#include <boost/make_shared.hpp>
 
 #define SEGMENT_SIZE 65536
 #define MAX_BUFFER_SIZE 1024
@@ -45,17 +47,46 @@ namespace ip = boost::asio::ip;
 
 using interprocess::interprocess_sharable_mutex;
 
+typedef char BufferName[MAX_NAME_SIZE];
+
+struct LocalBufferKey {
+    LocalBufferKey(const char* string) : length(strlen(string) > MAX_NAME_SIZE ? MAX_NAME_SIZE : strlen(string)) {
+        std::strcpy(name, string);
+    }
+    LocalBufferKey(const char* string, uint8_t len) : length(len > MAX_NAME_SIZE ? MAX_NAME_SIZE : len) {
+        std::strcpy(name, string);
+    }
+    friend std::size_t hash_value(LocalBufferKey const& e) {
+        return boost::hash_range(e.name, e.name+e.length);
+    }
+    friend bool operator==(const LocalBufferKey& x, const LocalBufferKey& y)  {
+        return !std::strcmp(x.name, y.name);
+    }
+    friend std::ostream& operator<<(std::ostream& stream, const LocalBufferKey& x) {
+        stream << x.name;
+        return stream;
+    }
+    BufferName name;
+    const uint8_t length;
+};
+
 struct RemoteBufferKey {
-    RemoteBufferKey(std::string string, ip::udp::endpoint end) : name(string), endpoint(end) {}
+    RemoteBufferKey(const char* string, ip::udp::endpoint end) : length(strlen(string) > MAX_NAME_SIZE ? MAX_NAME_SIZE : strlen(string)),
+                                                                 endpoint(end) {
+        std::strcpy(name, string);
+    }
+    RemoteBufferKey(const char* string, uint8_t len, ip::udp::endpoint end) : length(len > MAX_NAME_SIZE ? MAX_NAME_SIZE : len),
+                                                                 endpoint(end) {
+        std::strcpy(name, string);
+    }
     friend std::size_t hash_value(RemoteBufferKey const& e) {
-        std::size_t seed = 0;
-        boost::hash_combine(seed, e.name);
+        std::size_t seed = boost::hash_range(e.name, e.name+e.length);
         boost::hash_combine(seed, e.endpoint.address().to_v4().to_ulong());
         boost::hash_combine(seed, e.endpoint.port());
         return seed;
     }
     friend bool operator==(const RemoteBufferKey& x, const RemoteBufferKey& y)  {
-        return(x.name == y.name &&
+        return(!std::strcmp(x.name, y.name) &&
                x.endpoint.address() == y.endpoint.address() &&
                x.endpoint.port() == y.endpoint.port());
     }
@@ -63,12 +94,12 @@ struct RemoteBufferKey {
         stream << "{" << x.name << ", " << x.endpoint.address().to_v4().to_string() << ", " << x.endpoint.port()-RECEIVER_BASE_PORT << "}";
         return stream;
     }
-    const std::string name;
+    BufferName name;
+    const uint8_t length;
     const ip::udp::endpoint endpoint;
 };
 
 typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_sharable_mutex>, ip::udp::endpoint> LocalBuffer;
-typedef std::string LocalBufferKey;
 typedef std::pair<LocalBufferKey, LocalBuffer> MappedLocalBuffer;
 typedef interprocess::allocator<MappedLocalBuffer, interprocess::managed_shared_memory::segment_manager> LocalBufferAllocator;
 typedef boost::unordered_map<LocalBufferKey, LocalBuffer, boost::hash<LocalBufferKey>, std::equal_to<LocalBufferKey>, LocalBufferAllocator> LocalBufferMap;
@@ -78,4 +109,4 @@ typedef std::pair<RemoteBufferKey, RemoteBuffer> MappedRemoteBuffer;
 typedef interprocess::allocator<MappedRemoteBuffer, interprocess::managed_shared_memory::segment_manager> RemoteBufferAllocator;
 typedef boost::unordered_map<RemoteBufferKey, RemoteBuffer, boost::hash<RemoteBufferKey>, std::equal_to<RemoteBufferKey>, RemoteBufferAllocator> RemoteBufferMap;
 
-#endif //DSMTYPEDEFS_H
+#endif //DSMDEFINITIONS_H

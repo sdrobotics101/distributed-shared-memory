@@ -68,10 +68,10 @@ namespace dsm {
         private:
             void createLocalBuffer(LocalBufferKey key, uint16_t size, uint8_t clientID, bool localOnly);
             void createRemoteBuffer(RemoteBufferKey key, uint16_t size);
-            void fetchRemoteBuffer(std::string name, uint32_t addr, uint8_t clientID, uint8_t serverID);
+            void fetchRemoteBuffer(BufferName name, uint32_t addr, uint8_t clientID, uint8_t serverID);
 
-            void disconnectLocal(std::string name, uint8_t clientID);
-            void disconnectRemote(std::string name, uint32_t addr, uint8_t clientID, uint8_t serverID);
+            void disconnectLocal(BufferName name, uint8_t clientID);
+            void disconnectRemote(BufferName name, uint32_t addr, uint8_t clientID, uint8_t serverID);
             void disconnectClient(uint8_t clientID);
 
             void removeLocalBuffer(LocalBufferKey key);
