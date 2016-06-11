@@ -1,16 +1,18 @@
 #include "DSMClient.h"
 
 #ifdef BUILD_PYTHON_MODULE
-#include "DSMClientPython.h"
+#include "Python3/DSMClientPython.h"
 #endif
 
 dsm::Client::Client(uint8_t serverID, uint8_t clientID, bool reset) : Base("server"+std::to_string(serverID)),
                                                                       _clientID(clientID) {
     _message.clientID = _clientID;
     if (reset) {
-        _message.options = DISCONNECT_CLIENT;
-        _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
+        _message.options = CONNECT_CLIENT;
+    } else {
+        _message.options = CONNECT_CLIENT_NORESET;
     }
+    _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
 }
 
 dsm::Client::~Client() {
@@ -28,7 +30,7 @@ bool dsm::Client::registerLocalBuffer(std::string name, uint16_t length, bool lo
     if (localOnly) {
         _message.options = CREATE_LOCALONLY;
     } else {
-        _message.options = CREATE_LOCAL;    //really no effect, but for clarity
+        _message.options = CREATE_LOCAL;
     }
     std::strcpy(_message.name, name.c_str());
     _message.footer.size = length;
@@ -110,18 +112,6 @@ bool dsm::Client::getLocalBufferContents(std::string name, void* data) {
     return true;
 }
 
-std::string dsm::Client::getLocalBufferContents(std::string name) {
-    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
-    auto iterator = _localBufferMap->find(name.c_str());
-    if (iterator == _localBufferMap->end()) {
-        return "";
-    }
-    interprocess::sharable_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
-    void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
-    uint16_t len = std::get<1>(iterator->second);
-    return std::string((char*)ptr, len);
-}
-
 bool dsm::Client::setLocalBufferContents(std::string name, const void* data) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(name.c_str());
@@ -132,19 +122,6 @@ bool dsm::Client::setLocalBufferContents(std::string name, const void* data) {
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     uint16_t len = std::get<1>(iterator->second);
     memcpy(ptr, data, len);
-    return true;
-}
-
-bool dsm::Client::setLocalBufferContents(std::string name, std::string data) {
-    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
-    auto iterator = _localBufferMap->find(name.c_str());
-    if (iterator == _localBufferMap->end()) {
-        return false;
-    }
-    interprocess::scoped_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
-    void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
-    uint16_t len = std::get<1>(iterator->second);
-    memcpy(ptr, data.data(), len);
     return true;
 }
 
@@ -160,17 +137,4 @@ bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, 
     uint16_t len = std::get<1>(iterator->second);
     memcpy(data, ptr, len);
     return true;
-}
-
-std::string dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID) {
-    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
-    RemoteBufferKey key(name.c_str(), ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
-    auto iterator = _remoteBufferMap->find(key);
-    if (iterator == _remoteBufferMap->end()) {
-        return "";
-    }
-    interprocess::sharable_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
-    void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
-    uint16_t len = std::get<1>(iterator->second);
-    return std::string((char*)ptr, len);
 }

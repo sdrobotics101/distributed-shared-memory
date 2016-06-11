@@ -30,13 +30,14 @@ namespace dsm {
             bool doesRemoteExist(std::string name, std::string ipaddr, uint8_t serverID);
 
             bool getLocalBufferContents(std::string name, void* data);
-            std::string getLocalBufferContents(std::string name);
-
             bool setLocalBufferContents(std::string name, const void* data);
-            bool setLocalBufferContents(std::string name, std::string data);
-
             bool getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID, void* data);
-            std::string getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID);
+
+#ifdef BUILD_PYTHON_MODULE
+            std::string PY_getLocalBufferContents(std::string name);
+            bool PY_setLocalBufferContents(std::string name, std::string data);
+            std::string PY_getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID);
+#endif
         private:
             uint8_t _clientID;
     };

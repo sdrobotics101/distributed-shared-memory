@@ -7,7 +7,6 @@
 #include <functional>
 
 #include <boost/asio.hpp>
-#include <boost/array.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
@@ -40,6 +39,8 @@
 #define DISCONNECT_LOCAL 3
 #define DISCONNECT_REMOTE 4
 #define DISCONNECT_CLIENT 5
+#define CONNECT_CLIENT 6
+#define CONNECT_CLIENT_NORESET 7
 
 namespace interprocess = boost::interprocess;
 namespace asio = boost::asio;
