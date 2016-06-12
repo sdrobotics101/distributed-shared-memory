@@ -34,7 +34,12 @@ dsm::Server::Server(uint8_t serverID) : Base("server"+std::to_string(serverID)),
     logging::formatter format = logging::expressions::stream <<
         "[" << severity << "] " <<
         logging::expressions::smessage;
-    logging::core::get()->set_filter(severity > severity_levels::periodic);
+
+#ifdef LOG_LEVEL_INFO
+    logging::core::get()->set_filter(severity >= severity_levels::info);
+#else
+    logging::core::get()->set_filter(severity >= severity_levels::trace);
+#endif
 
     typedef logging::sinks::synchronous_sink<logging::sinks::text_ostream_backend> text_sink;
     boost::shared_ptr<text_sink> sink = boost::make_shared<text_sink>();
