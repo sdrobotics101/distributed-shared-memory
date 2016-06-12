@@ -84,7 +84,8 @@ namespace dsm {
 
             void processRequest(ip::udp::endpoint remoteEndpoint);
             void processACK(ip::udp::endpoint remoteEndpoint, bool localOnly);
-            void processData(const boost::system::error_code &error, size_t bytesReceived, RemoteBufferKey key, boost::shared_ptr<ip::udp::socket> sock, ip::udp::endpoint sender);
+            void processData(const boost::system::error_code &error, size_t bytesReceived, RemoteBufferKey key, boost::shared_ptr<ip::udp::socket> sock, ip::udp::endpoint sender, boost::shared_ptr<asio::deadline_timer> timer);
+            void setBufferToInactive(const boost::system::error_code &error, RemoteBufferKey key);
 
             void senderThreadFunction();
             void receiverThreadFunction();

@@ -184,7 +184,7 @@ void dsm::Server::createRemoteBuffer(RemoteBufferKey key, uint16_t size) {
     new (mutex.get()) interprocess_sharable_mutex;
 
     interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
-    _remoteBufferMap->insert(std::make_pair(key, std::make_tuple(handle, size, mutex)));
+    _remoteBufferMap->insert(std::make_pair(key, std::make_tuple(handle, size, mutex, true)));
 }
 
 void dsm::Server::fetchRemoteBuffer(BufferName name, uint32_t addr, uint8_t clientID, uint8_t serverID) {
@@ -403,6 +403,15 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
     sock->set_option(ip::udp::socket::reuse_address(true));
     sock->bind(listenEndpoint);
     sock->set_option(ip::multicast::join_group(ip::address_v4(mcastaddr)));
+
+    //create the inactivity timer before starting to listen
+    boost::shared_ptr<asio::deadline_timer> timer(new asio::deadline_timer(_ioService, boost::posix_time::milliseconds(INACTIVITY_TIMEOUT)));
+    timer->async_wait(boost::bind(&dsm::Server::setBufferToInactive,
+                                  this,
+                                  asio::placeholders::error,
+                                  key));
+
+    //start listening
     sock->async_receive_from(asio::buffer(_remoteReceiveBuffers[key].first.get(), _remoteReceiveBuffers[key].second),
                              senderEndpoint,
                              boost::bind(&dsm::Server::processData,
@@ -411,10 +420,11 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
                                          asio::placeholders::bytes_transferred,
                                          key,
                                          sock,
-                                         senderEndpoint));
+                                         senderEndpoint,
+                                         timer));
 }
 
-void dsm::Server::processData(const boost::system::error_code &error, size_t bytesReceived, RemoteBufferKey key, boost::shared_ptr<ip::udp::socket> sock, ip::udp::endpoint sender) {
+void dsm::Server::processData(const boost::system::error_code &error, size_t bytesReceived, RemoteBufferKey key, boost::shared_ptr<ip::udp::socket> sock, ip::udp::endpoint sender, boost::shared_ptr<asio::deadline_timer> timer) {
     LOG(_logger, periodic) << "RECEIVED DATA FOR REMOTE " << key;
     if (error) {
         LOG(_logger, severity_levels::error) << "ERROR PROCESSING DATA FOR " << key;
@@ -437,6 +447,19 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     interprocess::scoped_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     memcpy(ptr, _remoteReceiveBuffers[key].first.get(), len);
+    dataLock.unlock();
+    if (!std::get<3>(iterator->second)) {
+        mapLock.unlock();
+        interprocess::scoped_lock<interprocess_sharable_mutex> uniqueMapLock(*_remoteBufferMapLock);
+        std::get<3>(iterator->second) = true;
+        uniqueMapLock.unlock();
+        LOG(_logger, info) << "BUFFER " << key << " IS NOW ACTIVE";
+    }
+    timer->expires_from_now(boost::posix_time::milliseconds(INACTIVITY_TIMEOUT));
+    timer->async_wait(boost::bind(&dsm::Server::setBufferToInactive,
+                                  this,
+                                  asio::placeholders::error,
+                                  key));
     sock->async_receive_from(asio::buffer(_remoteReceiveBuffers[key].first.get(), _remoteReceiveBuffers[key].second),
                              sender,
                              boost::bind(&dsm::Server::processData,
@@ -445,7 +468,24 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
                                          asio::placeholders::bytes_transferred,
                                          key,
                                          sock,
-                                         sender));
+                                         sender,
+                                         timer));
+}
+
+void dsm::Server::setBufferToInactive(const boost::system::error_code &error, RemoteBufferKey key) {
+    if (error) {
+        if (error != boost::asio::error::operation_aborted) {
+            LOG(_logger, severity_levels::error) << "ERROR SETTING BUFFER INACTIVE" << error.message();
+        }
+        return;
+    }
+    interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
+    auto iterator = _remoteBufferMap->find(key);
+    if (iterator == _remoteBufferMap->end()) {
+        return;
+    }
+    std::get<3>(iterator->second) = false;
+    LOG(_logger, info) << "BUFFER " << key << " IS NOW INACTIVE";
 }
 
 void dsm::Server::senderThreadFunction() {

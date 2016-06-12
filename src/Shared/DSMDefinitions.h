@@ -31,6 +31,7 @@
 #define MAX_BUFFERS_PER_CLIENT 8
 
 #define SENDER_DELAY 10 //milliseconds
+#define INACTIVITY_TIMEOUT 1000 //milliseconds
 
 //message type codes
 #define CREATE_LOCAL 0
@@ -105,7 +106,7 @@ typedef std::pair<LocalBufferKey, LocalBuffer> MappedLocalBuffer;
 typedef interprocess::allocator<MappedLocalBuffer, interprocess::managed_shared_memory::segment_manager> LocalBufferAllocator;
 typedef boost::unordered_map<LocalBufferKey, LocalBuffer, boost::hash<LocalBufferKey>, std::equal_to<LocalBufferKey>, LocalBufferAllocator> LocalBufferMap;
 
-typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_sharable_mutex>> RemoteBuffer;
+typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_sharable_mutex>, bool> RemoteBuffer;
 typedef std::pair<RemoteBufferKey, RemoteBuffer> MappedRemoteBuffer;
 typedef interprocess::allocator<MappedRemoteBuffer, interprocess::managed_shared_memory::segment_manager> RemoteBufferAllocator;
 typedef boost::unordered_map<RemoteBufferKey, RemoteBuffer, boost::hash<RemoteBufferKey>, std::equal_to<RemoteBufferKey>, RemoteBufferAllocator> RemoteBufferMap;
