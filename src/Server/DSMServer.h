@@ -84,7 +84,7 @@ namespace dsm {
 
             void processRequest(ip::udp::endpoint remoteEndpoint);
             void processACK(ip::udp::endpoint remoteEndpoint, bool localOnly);
-            void processData(const boost::system::error_code &error, size_t bytesReceived, RemoteBufferKey key, ip::udp::socket* sock, ip::udp::endpoint sender);
+            void processData(const boost::system::error_code &error, size_t bytesReceived, RemoteBufferKey key, boost::shared_ptr<ip::udp::socket> sock, ip::udp::endpoint sender);
 
             void senderThreadFunction();
             void receiverThreadFunction();
@@ -105,7 +105,6 @@ namespace dsm {
             ip::udp::endpoint _senderEndpoint;
             boost::array<char, 36> _receiveBuffer;
 
-            std::vector<boost::shared_ptr<ip::udp::socket>> _sockets;
             boost::unordered_map<RemoteBufferKey, std::pair<boost::shared_array<char>, uint16_t>> _remoteReceiveBuffers;
 
             //map from local buffer name to client IDs of listeners

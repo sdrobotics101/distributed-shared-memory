@@ -398,11 +398,11 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
 
     boost::shared_ptr<ip::udp::socket> sock(new ip::udp::socket(_ioService));
     ip::udp::endpoint listenEndpoint(ip::address_v4::from_string("0.0.0.0"), mcastport);
+    ip::udp::endpoint senderEndpoint;
     sock->open(ip::udp::v4());
     sock->set_option(ip::udp::socket::reuse_address(true));
     sock->bind(listenEndpoint);
     sock->set_option(ip::multicast::join_group(ip::address_v4(mcastaddr)));
-    ip::udp::endpoint senderEndpoint;
     sock->async_receive_from(asio::buffer(_remoteReceiveBuffers[key].first.get(), _remoteReceiveBuffers[key].second),
                              senderEndpoint,
                              boost::bind(&dsm::Server::processData,
@@ -410,12 +410,11 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
                                          asio::placeholders::error,
                                          asio::placeholders::bytes_transferred,
                                          key,
-                                         sock.get(),
+                                         sock,
                                          senderEndpoint));
-    _sockets.push_back(sock);
 }
 
-void dsm::Server::processData(const boost::system::error_code &error, size_t bytesReceived, RemoteBufferKey key, ip::udp::socket* sock, ip::udp::endpoint sender) {
+void dsm::Server::processData(const boost::system::error_code &error, size_t bytesReceived, RemoteBufferKey key, boost::shared_ptr<ip::udp::socket> sock, ip::udp::endpoint sender) {
     LOG(_logger, periodic) << "RECEIVED DATA FOR REMOTE " << key;
     if (error) {
         LOG(_logger, severity_levels::error) << "ERROR PROCESSING DATA FOR " << key;
