@@ -20,11 +20,16 @@ dsm::Client::~Client() {
     _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
 }
 
-bool dsm::Client::registerLocalBuffer(std::string name, uint16_t length, bool localOnly) {
+LocalBufferKey dsm::Client::createLocalKey(std::string name) {
+    return LocalBufferKey(name.c_str());
+}
+
+RemoteBufferKey dsm::Client::createRemoteKey(std::string name, std::string ipaddr, uint8_t serverID) {
+    return RemoteBufferKey(name.c_str(), ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
+}
+
+bool dsm::Client::registerLocalBuffer(LocalBufferKey key, uint16_t length, bool localOnly) {
     if (length < 1 || length > MAX_BUFFER_SIZE) {
-        return false;
-    }
-    if (name.length() > MAX_NAME_SIZE-1) {
         return false;
     }
     if (localOnly) {
@@ -32,74 +37,52 @@ bool dsm::Client::registerLocalBuffer(std::string name, uint16_t length, bool lo
     } else {
         _message.options = CREATE_LOCAL;
     }
-    std::strcpy(_message.name, name.c_str());
+    std::strcpy(_message.name, key.name);
     _message.footer.size = length;
 
     _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
     return true;
 }
 
-bool dsm::Client::registerRemoteBuffer(std::string name, std::string ipaddr, uint8_t serverID) {
-    if (name.length() > MAX_NAME_SIZE-1) {
-        return false;
-    }
-    boost::system::error_code err;
-    _message.footer.ipaddr = boost::asio::ip::address_v4::from_string(ipaddr, err).to_ulong();
-    if (err) {
-        return false;
-    }
-
+bool dsm::Client::registerRemoteBuffer(RemoteBufferKey key) {
+    _message.footer.ipaddr = key.endpoint.address().to_v4().to_ulong();
     _message.options = FETCH_REMOTE;
-    _message.serverID = serverID;
-
-    std::strcpy(_message.name, name.c_str());
+    _message.serverID = key.endpoint.port()-RECEIVER_BASE_PORT;
+    std::strcpy(_message.name, key.name);
 
     _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
     return true;
 }
 
-bool dsm::Client::disconnectFromLocalBuffer(std::string name) {
-    if (name.length() > MAX_NAME_SIZE-1) {
-        return false;
-    }
-
+bool dsm::Client::disconnectFromLocalBuffer(LocalBufferKey key) {
     _message.options = DISCONNECT_LOCAL;
-    std::strcpy(_message.name, name.c_str());
+    std::strcpy(_message.name, key.name);
 
     _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
     return true;
 }
 
-bool dsm::Client::disconnectFromRemoteBuffer(std::string name, std::string ipaddr, uint8_t serverID) {
-    if (name.length() > MAX_NAME_SIZE-1) {
-        return false;
-    }
-    boost::system::error_code err;
-    _message.footer.ipaddr = boost::asio::ip::address_v4::from_string(ipaddr, err).to_ulong();
-    if (err) {
-        return false;
-    }
-
+bool dsm::Client::disconnectFromRemoteBuffer(RemoteBufferKey key) {
+    _message.footer.ipaddr = key.endpoint.address().to_v4().to_ulong();
     _message.options = DISCONNECT_REMOTE;
-    _message.serverID = serverID;
-    std::strcpy(_message.name, name.c_str());
+    _message.serverID = key.endpoint.port()-RECEIVER_BASE_PORT;
+    std::strcpy(_message.name, key.name);
 
     _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
     return true;
 }
 
-uint16_t dsm::Client::doesLocalExist(std::string name) {
+uint16_t dsm::Client::doesLocalExist(LocalBufferKey key) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
-    auto iterator = _localBufferMap->find(name.c_str());
+    auto iterator = _localBufferMap->find(key);
     if (iterator == _localBufferMap->end()) {
         return 0;
     }
     return std::get<1>(iterator->second);
 }
 
-uint16_t dsm::Client::doesRemoteExist(std::string name, std::string ipaddr, uint8_t serverID) {
+uint16_t dsm::Client::doesRemoteExist(RemoteBufferKey key) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
-    RemoteBufferKey key(name.c_str(), ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
         return 0;
@@ -107,9 +90,8 @@ uint16_t dsm::Client::doesRemoteExist(std::string name, std::string ipaddr, uint
     return std::get<1>(iterator->second);
 }
 
-bool dsm::Client::isRemoteActive(std::string name, std::string ipaddr, uint8_t serverID) {
+bool dsm::Client::isRemoteActive(RemoteBufferKey key) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
-    RemoteBufferKey key(name.c_str(), ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
         return false;
@@ -117,9 +99,9 @@ bool dsm::Client::isRemoteActive(std::string name, std::string ipaddr, uint8_t s
     return std::get<3>(iterator->second);
 }
 
-bool dsm::Client::getLocalBufferContents(std::string name, void* data) {
+bool dsm::Client::getLocalBufferContents(LocalBufferKey key, void* data) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
-    auto iterator = _localBufferMap->find(name.c_str());
+    auto iterator = _localBufferMap->find(key);
     if (iterator == _localBufferMap->end()) {
         return false;
     }
@@ -130,9 +112,9 @@ bool dsm::Client::getLocalBufferContents(std::string name, void* data) {
     return true;
 }
 
-bool dsm::Client::setLocalBufferContents(std::string name, const void* data) {
+bool dsm::Client::setLocalBufferContents(LocalBufferKey key, const void* data) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
-    auto iterator = _localBufferMap->find(name.c_str());
+    auto iterator = _localBufferMap->find(key);
     if (iterator == _localBufferMap->end()) {
         return false;
     }
@@ -143,9 +125,8 @@ bool dsm::Client::setLocalBufferContents(std::string name, const void* data) {
     return true;
 }
 
-bool dsm::Client::getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID, void* data) {
+bool dsm::Client::getRemoteBufferContents(RemoteBufferKey key, void* data) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
-    RemoteBufferKey key(name.c_str(), ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
         return false;

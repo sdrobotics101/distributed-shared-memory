@@ -15,7 +15,7 @@ Synchronizes shared memory buffers between multiple machines
    - Python3
 
 ## Known to work under
- - Operating System:
+ - Operating Systems:
    - OSX 10.11.5
    - Raspbian Jessie Lite
  - Compilers:

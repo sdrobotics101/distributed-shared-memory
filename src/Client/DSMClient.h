@@ -20,24 +20,40 @@ namespace dsm {
             Client(uint8_t serverID, uint8_t clientID, bool reset = true);
             virtual ~Client();
 
-            bool registerLocalBuffer(std::string name, uint16_t length, bool localOnly);
-            bool registerRemoteBuffer(std::string name, std::string ipaddr, uint8_t serverID);
+            static LocalBufferKey createLocalKey(std::string name);
+            static RemoteBufferKey createRemoteKey(std::string name, std::string ipaddr, uint8_t serverID);
 
-            bool disconnectFromLocalBuffer(std::string name);
-            bool disconnectFromRemoteBuffer(std::string name, std::string ipaddr, uint8_t serverID);
+            bool registerLocalBuffer(LocalBufferKey key, uint16_t length, bool localOnly);
+            bool registerRemoteBuffer(RemoteBufferKey key);
 
-            uint16_t doesLocalExist(std::string name);
-            uint16_t doesRemoteExist(std::string name, std::string ipaddr, uint8_t serverID);
+            bool disconnectFromLocalBuffer(LocalBufferKey key);
+            bool disconnectFromRemoteBuffer(RemoteBufferKey key);
 
-            bool isRemoteActive(std::string name, std::string ipaddr, uint8_t serverID);
+            uint16_t doesLocalExist(LocalBufferKey key);
+            uint16_t doesRemoteExist(RemoteBufferKey key);
 
-            bool getLocalBufferContents(std::string name, void* data);
-            bool setLocalBufferContents(std::string name, const void* data);
-            bool getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID, void* data);
+            bool isRemoteActive(RemoteBufferKey key);
+
+            bool getLocalBufferContents(LocalBufferKey key, void* data);
+            bool setLocalBufferContents(LocalBufferKey key, const void* data);
+
+            bool getRemoteBufferContents(RemoteBufferKey key, void* data);
 
 #ifdef BUILD_PYTHON_MODULE
+            bool PY_registerLocalBuffer(std::string name, uint16_t length, bool localOnly);
+            bool PY_registerRemoteBuffer(std::string name, std::string ipaddr, uint8_t serverID);
+
+            bool PY_disconnectFromLocalBuffer(std::string name);
+            bool PY_disconnectFromRemoteBuffer(std::string name, std::string ipaddr, uint8_t serverID);
+
+            uint16_t PY_doesLocalExist(std::string name);
+            uint16_t PY_doesRemoteExist(std::string name, std::string ipaddr, uint8_t serverID);
+
+            bool PY_isRemoteActive(std::string name, std::string ipaddr, uint8_t serverID);
+
             std::string PY_getLocalBufferContents(std::string name);
             bool PY_setLocalBufferContents(std::string name, std::string data);
+
             std::string PY_getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID);
 #endif
         private:
