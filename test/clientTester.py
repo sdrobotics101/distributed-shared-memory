@@ -66,8 +66,12 @@ if __name__ == "__main__":
                     print("invalid IP address")
                     continue
                 size = client.doesRemoteExist(tokens[1], tokens[2], int(tokens[3]))
+                active = client.isRemoteActive(tokens[1], tokens[2], int(tokens[3]))
                 if size:
-                    print("Remote buffer exists with size " + str(size))
+                    if active:
+                        print("Remote buffer is active and has size " + str(size))
+                    else:
+                        print("Remote buffer is inactive and has size " + str(size))
                 else:
                     print("Remote does not exist")
             elif (tokens[0] == "getl" and len(tokens) == 2):

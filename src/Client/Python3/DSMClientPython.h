@@ -15,6 +15,7 @@ BOOST_PYTHON_MODULE(pydsm) {
         .def("disconnectFromRemoteBuffer", &dsm::Client::disconnectFromRemoteBuffer)
         .def("doesLocalExist", &dsm::Client::doesLocalExist)
         .def("doesRemoteExist", &dsm::Client::doesRemoteExist)
+        .def("isRemoteActive", &dsm::Client::isRemoteActive)
         .def("getLocalBufferContents", &dsm::Client::PY_getLocalBufferContents)
         .def("setLocalBufferContents", &dsm::Client::PY_setLocalBufferContents)
         .def("getRemoteBufferContents", &dsm::Client::PY_getRemoteBufferContents)

@@ -107,6 +107,16 @@ uint16_t dsm::Client::doesRemoteExist(std::string name, std::string ipaddr, uint
     return std::get<1>(iterator->second);
 }
 
+bool dsm::Client::isRemoteActive(std::string name, std::string ipaddr, uint8_t serverID) {
+    interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
+    RemoteBufferKey key(name.c_str(), ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
+    auto iterator = _remoteBufferMap->find(key);
+    if (iterator == _remoteBufferMap->end()) {
+        return false;
+    }
+    return std::get<3>(iterator->second);
+}
+
 bool dsm::Client::getLocalBufferContents(std::string name, void* data) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(name.c_str());
