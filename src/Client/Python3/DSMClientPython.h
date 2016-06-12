@@ -5,10 +5,10 @@
 
 #include "../DSMClient.h"
 
-using namespace boost::python;
+namespace python = boost::python;
 
 BOOST_PYTHON_MODULE(pydsm) {
-    class_<dsm::Client, boost::noncopyable>("Client", init<uint8_t, uint8_t, bool>())
+    python::class_<dsm::Client, boost::noncopyable>("Client", python::init<uint8_t, uint8_t, bool>())
         .def("registerLocalBuffer", &dsm::Client::PY_registerLocalBuffer)
         .def("registerRemoteBuffer", &dsm::Client::PY_registerRemoteBuffer)
         .def("disconnectFromLocalBuffer", &dsm::Client::PY_disconnectFromLocalBuffer)
@@ -75,16 +75,16 @@ bool dsm::Client::PY_setLocalBufferContents(std::string name, std::string data) 
     return true;
 }
 
-std::string dsm::Client::PY_getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID) {
+python::tuple dsm::Client::PY_getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     auto iterator = _remoteBufferMap->find(createRemoteKey(name, ipaddr, serverID));
     if (iterator == _remoteBufferMap->end()) {
-        return "";
+        return python::make_tuple("", false);
     }
     interprocess::sharable_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     uint16_t len = std::get<1>(iterator->second);
-    return std::string((char*)ptr, len);
+    return python::make_tuple(std::string((char*)ptr, len), std::get<3>(iterator->second));
 }
 
 #endif //DSMCLIENT_PYTHON_H

@@ -85,7 +85,11 @@ if __name__ == "__main__":
                 if not validateIP(tokens[2]):
                     print("invalid IP address")
                     continue
-                print(client.getRemoteBufferContents(tokens[1], tokens[2], int(tokens[3])))
+                data, active = client.getRemoteBufferContents(tokens[1], tokens[2], int(tokens[3]))
+                if active:
+                    print("Active: " + data)
+                else:
+                    print("Inactive: " + data)
             else:
                 print("unknown")
     except KeyboardInterrupt:

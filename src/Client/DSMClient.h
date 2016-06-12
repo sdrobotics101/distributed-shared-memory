@@ -11,6 +11,10 @@
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/interprocess/sync/sharable_lock.hpp>
 
+#ifdef BUILD_PYTHON_MODULE
+#include <boost/python.hpp>
+#endif
+
 #include "../Shared/DSMDefinitions.h"
 #include "../Shared/DSMBase.h"
 
@@ -37,7 +41,7 @@ namespace dsm {
             bool getLocalBufferContents(LocalBufferKey key, void* data);
             bool setLocalBufferContents(LocalBufferKey key, const void* data);
 
-            bool getRemoteBufferContents(RemoteBufferKey key, void* data);
+            uint8_t getRemoteBufferContents(RemoteBufferKey key, void* data);
 
 #ifdef BUILD_PYTHON_MODULE
             bool PY_registerLocalBuffer(std::string name, uint16_t length, bool localOnly);
@@ -54,7 +58,7 @@ namespace dsm {
             std::string PY_getLocalBufferContents(std::string name);
             bool PY_setLocalBufferContents(std::string name, std::string data);
 
-            std::string PY_getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID);
+            boost::python::tuple PY_getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID);
 #endif
         private:
             uint8_t _clientID;

@@ -125,15 +125,15 @@ bool dsm::Client::setLocalBufferContents(LocalBufferKey key, const void* data) {
     return true;
 }
 
-bool dsm::Client::getRemoteBufferContents(RemoteBufferKey key, void* data) {
+uint8_t dsm::Client::getRemoteBufferContents(RemoteBufferKey key, void* data) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
-        return false;
+        return -1;
     }
     interprocess::sharable_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     uint16_t len = std::get<1>(iterator->second);
     memcpy(data, ptr, len);
-    return true;
+    return (std::get<3>(iterator->second) ? 0 : 1);
 }
