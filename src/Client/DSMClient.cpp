@@ -21,11 +21,11 @@ dsm::Client::~Client() {
 }
 
 LocalBufferKey dsm::Client::createLocalKey(std::string name) {
-    return LocalBufferKey(name.c_str());
+    return LocalBufferKey(name.substr(0, MAX_NAME_SIZE-1).c_str());
 }
 
 RemoteBufferKey dsm::Client::createRemoteKey(std::string name, std::string ipaddr, uint8_t serverID) {
-    return RemoteBufferKey(name.c_str(), ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
+    return RemoteBufferKey(name.substr(0, MAX_NAME_SIZE-1).c_str(), ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
 }
 
 bool dsm::Client::registerLocalBuffer(LocalBufferKey key, uint16_t length, bool localOnly) {

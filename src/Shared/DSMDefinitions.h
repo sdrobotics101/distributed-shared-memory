@@ -15,6 +15,7 @@
 #include <boost/interprocess/sync/interprocess_sharable_mutex.hpp>
 #include <boost/make_shared.hpp>
 
+//This isn't actually enough for the max possible number of buffers
 #define SEGMENT_SIZE 65536
 #define MAX_BUFFER_SIZE 1024
 
