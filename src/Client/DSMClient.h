@@ -26,8 +26,8 @@ namespace dsm {
             bool disconnectFromLocalBuffer(std::string name);
             bool disconnectFromRemoteBuffer(std::string name, std::string ipaddr, uint8_t serverID);
 
-            bool doesLocalExist(std::string name);
-            bool doesRemoteExist(std::string name, std::string ipaddr, uint8_t serverID);
+            uint16_t doesLocalExist(std::string name);
+            uint16_t doesRemoteExist(std::string name, std::string ipaddr, uint8_t serverID);
 
             bool getLocalBufferContents(std::string name, void* data);
             bool setLocalBufferContents(std::string name, const void* data);

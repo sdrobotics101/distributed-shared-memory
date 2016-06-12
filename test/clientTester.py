@@ -56,16 +56,18 @@ if __name__ == "__main__":
                 else:
                     print("Invalid operands")
             elif (tokens[0] == "checkl" and len(tokens) == 2):
-                if client.doesLocalExist(tokens[1]):
-                    print("Local exists")
+                size = client.doesLocalExist(tokens[1])
+                if size:
+                    print("Local buffer exists with size " + str(size))
                 else:
                     print("Local does not exist")
             elif (tokens[0] == "checkr" and len(tokens) == 4):
                 if not validateIP(tokens[2]):
                     print("invalid IP address")
                     continue
-                if client.doesRemoteExist(tokens[1], tokens[2], int(tokens[3])):
-                    print("Remote exists")
+                size = client.doesRemoteExist(tokens[1], tokens[2], int(tokens[3]))
+                if size:
+                    print("Remote buffer exists with size " + str(size))
                 else:
                     print("Remote does not exist")
             elif (tokens[0] == "getl" and len(tokens) == 2):
