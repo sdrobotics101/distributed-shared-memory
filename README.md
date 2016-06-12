@@ -12,19 +12,20 @@ Synchronizes shared memory buffers between multiple machines
 ## Optional
  - Boost:
    - Log
-   - Python
+   - Python3
 
-## Compatibility
- - Currently tested using:
+## Known to work under
+ - Operating System:
    - OSX 10.11.5
+   - Raspbian Jessie Lite
+ - Compilers:
    - Clang 3.8
-   - Boost 1.59
-   - Python 3.5.1
-   - CMake 3.5.2
+   - GCC 4.9.2 ARM hf
+ - Boost > 1.55
+ - Python > 3.4.2
+ - CMake > 3.0.2
 
 ## TODO
- - Test compatibility under other setups
- - Wiki writeup of usage
+ - General optimization
  - Memory analysis
- - Performance analysis
  - Extensive unit testing
