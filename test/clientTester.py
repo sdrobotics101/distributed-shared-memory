@@ -60,7 +60,7 @@ if __name__ == "__main__":
                 if size:
                     print("Local buffer exists with size " + str(size))
                 else:
-                    print("Local does not exist")
+                    print("Local buffer does not exist")
             elif (tokens[0] == "checkr" and len(tokens) == 4):
                 if not validateIP(tokens[2]):
                     print("invalid IP address")
@@ -73,7 +73,7 @@ if __name__ == "__main__":
                     else:
                         print("Remote buffer is inactive and has size " + str(size))
                 else:
-                    print("Remote does not exist")
+                    print("Remote buffer does not exist")
             elif (tokens[0] == "getl" and len(tokens) == 2):
                 print(client.getLocalBufferContents(tokens[1]))
             elif (tokens[0] == "setl" and len(tokens) == 3):

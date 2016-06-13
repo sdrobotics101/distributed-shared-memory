@@ -53,6 +53,12 @@ using interprocess::interprocess_sharable_mutex;
 typedef char BufferName[MAX_NAME_SIZE];
 
 struct LocalBufferKey {
+    LocalBufferKey() : length(0) {
+        std::strcpy(name, "");
+    }
+    LocalBufferKey(const LocalBufferKey &x) : length(x.length) {
+        std::strcpy(name, x.name);
+    }
     LocalBufferKey(const char* string) : length(strlen(string) > MAX_NAME_SIZE ? MAX_NAME_SIZE : strlen(string)) {
         std::strcpy(name, string);
     }
@@ -69,11 +75,23 @@ struct LocalBufferKey {
         stream << x.name;
         return stream;
     }
+    LocalBufferKey& operator=(const LocalBufferKey &x) {
+        std::strcpy(name, x.name);
+        length = x.length;
+        return *this;
+    }
     BufferName name;
-    const uint8_t length;
+    uint8_t length;
 };
 
 struct RemoteBufferKey {
+    RemoteBufferKey() : length(0) {
+        std::strcpy(name, "");
+    }
+    RemoteBufferKey(const RemoteBufferKey &x) : length(x.length) {
+        std::strcpy(name, x.name);
+        endpoint = x.endpoint;
+    }
     RemoteBufferKey(const char* string, ip::udp::endpoint end) : length(strlen(string) > MAX_NAME_SIZE ? MAX_NAME_SIZE : strlen(string)),
                                                                  endpoint(end) {
         std::strcpy(name, string);
@@ -97,9 +115,15 @@ struct RemoteBufferKey {
         stream << "{" << x.name << ", " << x.endpoint.address().to_v4().to_string() << ", " << x.endpoint.port()-RECEIVER_BASE_PORT << "}";
         return stream;
     }
+    RemoteBufferKey& operator=(const RemoteBufferKey &x) {
+        std::strcpy(name, x.name);
+        length = x.length;
+        endpoint = x.endpoint;
+        return *this;
+    }
     BufferName name;
-    const uint8_t length;
-    const ip::udp::endpoint endpoint;
+    uint8_t length;
+    ip::udp::endpoint endpoint;
 };
 
 typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_sharable_mutex>, ip::udp::endpoint> LocalBuffer;

@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
             ("serverID,s", po::value<int>(&serverID), "the serverID of the server")
             ;
         po::positional_options_description positionalOptions;
-        positionalOptions.add("serverID", -1);
+        positionalOptions.add("serverID", 1);
 
         po::variables_map vm;
         po::store(po::command_line_parser(argc, argv).
