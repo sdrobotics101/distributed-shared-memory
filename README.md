@@ -21,11 +21,6 @@ Synchronizes shared memory buffers between multiple machines
  - Compilers:
    - Clang 3.8
    - GCC 4.9.2 ARM hf
- - Boost > 1.55
- - Python > 3.4.2
- - CMake > 3.0.2
-
-## TODO
- - General optimization
- - Memory analysis
- - Extensive unit testing
+ - Boost >= 1.55
+ - Python >= 3.4.2
+ - CMake >= 3.0.2
