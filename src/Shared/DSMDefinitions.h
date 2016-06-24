@@ -50,90 +50,92 @@ namespace ip = boost::asio::ip;
 
 using interprocess::interprocess_sharable_mutex;
 
-typedef char BufferName[MAX_NAME_SIZE];
+namespace dsm {
+    typedef char BufferName[MAX_NAME_SIZE];
 
-struct LocalBufferKey {
-    LocalBufferKey() : length(0) {
-        std::strcpy(name, "");
-    }
-    LocalBufferKey(const LocalBufferKey &x) : length(x.length) {
-        std::strcpy(name, x.name);
-    }
-    LocalBufferKey(const char* string) : length(strlen(string) > MAX_NAME_SIZE ? MAX_NAME_SIZE : strlen(string)) {
-        std::strcpy(name, string);
-    }
-    LocalBufferKey(const char* string, uint8_t len) : length(len > MAX_NAME_SIZE ? MAX_NAME_SIZE : len) {
-        std::strcpy(name, string);
-    }
-    friend std::size_t hash_value(LocalBufferKey const& e) {
-        return boost::hash_range(e.name, e.name+e.length);
-    }
-    friend bool operator==(const LocalBufferKey& x, const LocalBufferKey& y)  {
-        return !std::strcmp(x.name, y.name);
-    }
-    friend std::ostream& operator<<(std::ostream& stream, const LocalBufferKey& x) {
-        stream << x.name;
-        return stream;
-    }
-    LocalBufferKey& operator=(const LocalBufferKey &x) {
-        std::strcpy(name, x.name);
-        length = x.length;
-        return *this;
-    }
-    BufferName name;
-    uint8_t length;
-};
+    struct LocalBufferKey {
+        LocalBufferKey() : length(0) {
+            std::strcpy(name, "");
+        }
+        LocalBufferKey(const LocalBufferKey &x) : length(x.length) {
+            std::strcpy(name, x.name);
+        }
+        LocalBufferKey(const char* string) : length(strlen(string) > MAX_NAME_SIZE ? MAX_NAME_SIZE : strlen(string)) {
+            std::strcpy(name, string);
+        }
+        LocalBufferKey(const char* string, uint8_t len) : length(len > MAX_NAME_SIZE ? MAX_NAME_SIZE : len) {
+            std::strcpy(name, string);
+        }
+        friend std::size_t hash_value(LocalBufferKey const& e) {
+            return boost::hash_range(e.name, e.name+e.length);
+        }
+        friend bool operator==(const LocalBufferKey& x, const LocalBufferKey& y)  {
+            return !std::strcmp(x.name, y.name);
+        }
+        friend std::ostream& operator<<(std::ostream& stream, const LocalBufferKey& x) {
+            stream << x.name;
+            return stream;
+        }
+        LocalBufferKey& operator=(const LocalBufferKey &x) {
+            std::strcpy(name, x.name);
+            length = x.length;
+            return *this;
+        }
+        BufferName name;
+        uint8_t length;
+    };
 
-struct RemoteBufferKey {
-    RemoteBufferKey() : length(0) {
-        std::strcpy(name, "");
-    }
-    RemoteBufferKey(const RemoteBufferKey &x) : length(x.length) {
-        std::strcpy(name, x.name);
-        endpoint = x.endpoint;
-    }
-    RemoteBufferKey(const char* string, ip::udp::endpoint end) : length(strlen(string) > MAX_NAME_SIZE ? MAX_NAME_SIZE : strlen(string)),
-                                                                 endpoint(end) {
-        std::strcpy(name, string);
-    }
-    RemoteBufferKey(const char* string, uint8_t len, ip::udp::endpoint end) : length(len > MAX_NAME_SIZE ? MAX_NAME_SIZE : len),
-                                                                 endpoint(end) {
-        std::strcpy(name, string);
-    }
-    friend std::size_t hash_value(RemoteBufferKey const& e) {
-        std::size_t seed = boost::hash_range(e.name, e.name+e.length);
-        boost::hash_combine(seed, e.endpoint.address().to_v4().to_ulong());
-        boost::hash_combine(seed, e.endpoint.port());
-        return seed;
-    }
-    friend bool operator==(const RemoteBufferKey& x, const RemoteBufferKey& y)  {
-        return(!std::strcmp(x.name, y.name) &&
-               x.endpoint.address() == y.endpoint.address() &&
-               x.endpoint.port() == y.endpoint.port());
-    }
-    friend std::ostream& operator<<(std::ostream& stream, const RemoteBufferKey& x) {
-        stream << "{" << x.name << ", " << x.endpoint.address().to_v4().to_string() << ", " << x.endpoint.port()-RECEIVER_BASE_PORT << "}";
-        return stream;
-    }
-    RemoteBufferKey& operator=(const RemoteBufferKey &x) {
-        std::strcpy(name, x.name);
-        length = x.length;
-        endpoint = x.endpoint;
-        return *this;
-    }
-    BufferName name;
-    uint8_t length;
-    ip::udp::endpoint endpoint;
-};
+    struct RemoteBufferKey {
+        RemoteBufferKey() : length(0) {
+            std::strcpy(name, "");
+        }
+        RemoteBufferKey(const RemoteBufferKey &x) : length(x.length) {
+            std::strcpy(name, x.name);
+            endpoint = x.endpoint;
+        }
+        RemoteBufferKey(const char* string, ip::udp::endpoint end) : length(strlen(string) > MAX_NAME_SIZE ? MAX_NAME_SIZE : strlen(string)),
+                                                                     endpoint(end) {
+            std::strcpy(name, string);
+        }
+        RemoteBufferKey(const char* string, uint8_t len, ip::udp::endpoint end) : length(len > MAX_NAME_SIZE ? MAX_NAME_SIZE : len),
+                                                                     endpoint(end) {
+            std::strcpy(name, string);
+        }
+        friend std::size_t hash_value(RemoteBufferKey const& e) {
+            std::size_t seed = boost::hash_range(e.name, e.name+e.length);
+            boost::hash_combine(seed, e.endpoint.address().to_v4().to_ulong());
+            boost::hash_combine(seed, e.endpoint.port());
+            return seed;
+        }
+        friend bool operator==(const RemoteBufferKey& x, const RemoteBufferKey& y)  {
+            return(!std::strcmp(x.name, y.name) &&
+                   x.endpoint.address() == y.endpoint.address() &&
+                   x.endpoint.port() == y.endpoint.port());
+        }
+        friend std::ostream& operator<<(std::ostream& stream, const RemoteBufferKey& x) {
+            stream << "{" << x.name << ", " << x.endpoint.address().to_v4().to_string() << ", " << x.endpoint.port()-RECEIVER_BASE_PORT << "}";
+            return stream;
+        }
+        RemoteBufferKey& operator=(const RemoteBufferKey &x) {
+            std::strcpy(name, x.name);
+            length = x.length;
+            endpoint = x.endpoint;
+            return *this;
+        }
+        BufferName name;
+        uint8_t length;
+        ip::udp::endpoint endpoint;
+    };
 
-typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_sharable_mutex>, ip::udp::endpoint> LocalBuffer;
-typedef std::pair<LocalBufferKey, LocalBuffer> MappedLocalBuffer;
-typedef interprocess::allocator<MappedLocalBuffer, interprocess::managed_shared_memory::segment_manager> LocalBufferAllocator;
-typedef boost::unordered_map<LocalBufferKey, LocalBuffer, boost::hash<LocalBufferKey>, std::equal_to<LocalBufferKey>, LocalBufferAllocator> LocalBufferMap;
+    typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_sharable_mutex>, ip::udp::endpoint> LocalBuffer;
+    typedef std::pair<LocalBufferKey, LocalBuffer> MappedLocalBuffer;
+    typedef interprocess::allocator<MappedLocalBuffer, interprocess::managed_shared_memory::segment_manager> LocalBufferAllocator;
+    typedef boost::unordered_map<LocalBufferKey, LocalBuffer, boost::hash<LocalBufferKey>, std::equal_to<LocalBufferKey>, LocalBufferAllocator> LocalBufferMap;
 
-typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_sharable_mutex>, bool> RemoteBuffer;
-typedef std::pair<RemoteBufferKey, RemoteBuffer> MappedRemoteBuffer;
-typedef interprocess::allocator<MappedRemoteBuffer, interprocess::managed_shared_memory::segment_manager> RemoteBufferAllocator;
-typedef boost::unordered_map<RemoteBufferKey, RemoteBuffer, boost::hash<RemoteBufferKey>, std::equal_to<RemoteBufferKey>, RemoteBufferAllocator> RemoteBufferMap;
+    typedef std::tuple<interprocess::managed_shared_memory::handle_t, uint16_t, interprocess::offset_ptr<interprocess_sharable_mutex>, bool> RemoteBuffer;
+    typedef std::pair<RemoteBufferKey, RemoteBuffer> MappedRemoteBuffer;
+    typedef interprocess::allocator<MappedRemoteBuffer, interprocess::managed_shared_memory::segment_manager> RemoteBufferAllocator;
+    typedef boost::unordered_map<RemoteBufferKey, RemoteBuffer, boost::hash<RemoteBufferKey>, std::equal_to<RemoteBufferKey>, RemoteBufferAllocator> RemoteBufferMap;
+}
 
 #endif //DSMDEFINITIONS_H

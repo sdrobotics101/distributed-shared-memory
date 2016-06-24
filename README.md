@@ -1,4 +1,4 @@
-# Distributed Shared Memory Controller
+# Distributed Shared Memory
 Synchronizes shared memory buffers between multiple machines
 
 ## Requirements

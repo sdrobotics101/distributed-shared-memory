@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.9)
-set(PROJECT_NAME_STR DSM-Controller)
+set(PROJECT_NAME_STR DistributedSharedMemory)
 project(${PROJECT_NAME_STR})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -std=c++11")

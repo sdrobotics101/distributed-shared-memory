@@ -20,15 +20,15 @@ dsm::Client::~Client() {
     _messageQueue.send(&_message, QUEUE_MESSAGE_SIZE, 0);
 }
 
-LocalBufferKey dsm::Client::createLocalKey(std::string name) {
-    return LocalBufferKey(name.substr(0, MAX_NAME_SIZE-1).c_str());
+dsm::LocalBufferKey dsm::Client::createLocalKey(std::string name) {
+    return dsm::LocalBufferKey(name.substr(0, MAX_NAME_SIZE-1).c_str());
 }
 
-RemoteBufferKey dsm::Client::createRemoteKey(std::string name, std::string ipaddr, uint8_t serverID) {
-    return RemoteBufferKey(name.substr(0, MAX_NAME_SIZE-1).c_str(), ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
+dsm::RemoteBufferKey dsm::Client::createRemoteKey(std::string name, std::string ipaddr, uint8_t serverID) {
+    return dsm::RemoteBufferKey(name.substr(0, MAX_NAME_SIZE-1).c_str(), ip::udp::endpoint(ip::address::from_string(ipaddr), RECEIVER_BASE_PORT+serverID));
 }
 
-bool dsm::Client::registerLocalBuffer(LocalBufferKey key, uint16_t length, bool localOnly) {
+bool dsm::Client::registerLocalBuffer(dsm::LocalBufferKey key, uint16_t length, bool localOnly) {
     if (length < 1 || length > MAX_BUFFER_SIZE) {
         return false;
     }
@@ -44,7 +44,7 @@ bool dsm::Client::registerLocalBuffer(LocalBufferKey key, uint16_t length, bool 
     return true;
 }
 
-bool dsm::Client::registerRemoteBuffer(RemoteBufferKey key) {
+bool dsm::Client::registerRemoteBuffer(dsm::RemoteBufferKey key) {
     _message.footer.ipaddr = key.endpoint.address().to_v4().to_ulong();
     _message.options = FETCH_REMOTE;
     _message.serverID = key.endpoint.port()-RECEIVER_BASE_PORT;
@@ -54,7 +54,7 @@ bool dsm::Client::registerRemoteBuffer(RemoteBufferKey key) {
     return true;
 }
 
-bool dsm::Client::disconnectFromLocalBuffer(LocalBufferKey key) {
+bool dsm::Client::disconnectFromLocalBuffer(dsm::LocalBufferKey key) {
     _message.options = DISCONNECT_LOCAL;
     std::strcpy(_message.name, key.name);
 
@@ -62,7 +62,7 @@ bool dsm::Client::disconnectFromLocalBuffer(LocalBufferKey key) {
     return true;
 }
 
-bool dsm::Client::disconnectFromRemoteBuffer(RemoteBufferKey key) {
+bool dsm::Client::disconnectFromRemoteBuffer(dsm::RemoteBufferKey key) {
     _message.footer.ipaddr = key.endpoint.address().to_v4().to_ulong();
     _message.options = DISCONNECT_REMOTE;
     _message.serverID = key.endpoint.port()-RECEIVER_BASE_PORT;
@@ -72,7 +72,7 @@ bool dsm::Client::disconnectFromRemoteBuffer(RemoteBufferKey key) {
     return true;
 }
 
-uint16_t dsm::Client::doesLocalExist(LocalBufferKey key) {
+uint16_t dsm::Client::doesLocalExist(dsm::LocalBufferKey key) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(key);
     if (iterator == _localBufferMap->end()) {
@@ -81,7 +81,7 @@ uint16_t dsm::Client::doesLocalExist(LocalBufferKey key) {
     return std::get<1>(iterator->second);
 }
 
-uint16_t dsm::Client::doesRemoteExist(RemoteBufferKey key) {
+uint16_t dsm::Client::doesRemoteExist(dsm::RemoteBufferKey key) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
@@ -90,7 +90,7 @@ uint16_t dsm::Client::doesRemoteExist(RemoteBufferKey key) {
     return std::get<1>(iterator->second);
 }
 
-bool dsm::Client::isRemoteActive(RemoteBufferKey key) {
+bool dsm::Client::isRemoteActive(dsm::RemoteBufferKey key) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
@@ -99,7 +99,7 @@ bool dsm::Client::isRemoteActive(RemoteBufferKey key) {
     return std::get<3>(iterator->second);
 }
 
-bool dsm::Client::getLocalBufferContents(LocalBufferKey key, void* data) {
+bool dsm::Client::getLocalBufferContents(dsm::LocalBufferKey key, void* data) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(key);
     if (iterator == _localBufferMap->end()) {
@@ -112,7 +112,7 @@ bool dsm::Client::getLocalBufferContents(LocalBufferKey key, void* data) {
     return true;
 }
 
-bool dsm::Client::setLocalBufferContents(LocalBufferKey key, const void* data) {
+bool dsm::Client::setLocalBufferContents(dsm::LocalBufferKey key, const void* data) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(key);
     if (iterator == _localBufferMap->end()) {
@@ -125,7 +125,7 @@ bool dsm::Client::setLocalBufferContents(LocalBufferKey key, const void* data) {
     return true;
 }
 
-uint8_t dsm::Client::getRemoteBufferContents(RemoteBufferKey key, void* data) {
+uint8_t dsm::Client::getRemoteBufferContents(dsm::RemoteBufferKey key, void* data) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {

@@ -27,8 +27,8 @@ void processInput(dsm::Client* client) {
     while (std::getline(ss, token, ' ')) {
         tokens.push_back(token);
     }
-    LocalBufferKey lKey;
-    RemoteBufferKey rKey;
+    dsm::LocalBufferKey lKey;
+    dsm::RemoteBufferKey rKey;
     uint16_t size;
     switch (tokens.size()-1) {
         case 0:

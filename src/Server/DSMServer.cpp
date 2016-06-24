@@ -150,7 +150,7 @@ void dsm::Server::stop() {
     _messageQueue.send(0, 0, 0);
 }
 
-void dsm::Server::createLocalBuffer(LocalBufferKey key, uint16_t size, uint8_t clientID, bool localOnly) {
+void dsm::Server::createLocalBuffer(dsm::LocalBufferKey key, uint16_t size, uint8_t clientID, bool localOnly) {
     LOG(_logger, trace) << "CREATING LOCAL BUFFER: " << key;
     interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     if (_localBufferMap->find(key) != _localBufferMap->end()) {
@@ -180,7 +180,7 @@ void dsm::Server::createLocalBuffer(LocalBufferKey key, uint16_t size, uint8_t c
     _localBufferMap->insert(std::make_pair(key, std::make_tuple(handle, size, mutex, endpoint)));
 }
 
-void dsm::Server::createRemoteBuffer(RemoteBufferKey key, uint16_t size) {
+void dsm::Server::createRemoteBuffer(dsm::RemoteBufferKey key, uint16_t size) {
     LOG(_logger, trace) << "CREATING REMOTE BUFFER: " << key;
 
     void* buf = _segment.allocate(size);
@@ -194,7 +194,7 @@ void dsm::Server::createRemoteBuffer(RemoteBufferKey key, uint16_t size) {
 
 void dsm::Server::fetchRemoteBuffer(BufferName name, uint32_t addr, uint8_t clientID, uint8_t serverID) {
     ip::udp::endpoint endpoint(ip::address_v4(addr), RECEIVER_BASE_PORT+serverID);
-    RemoteBufferKey key(name, endpoint);
+    dsm::RemoteBufferKey key(name, endpoint);
     LOG(_logger, trace) << "FETCHING REMOTE BUFFER: " << key;
     _remoteBufferLocalListeners[key].insert(clientID);
     _clientSubscriptions[clientID].second.insert(key);
@@ -218,7 +218,7 @@ void dsm::Server::disconnectLocal(BufferName name, uint8_t clientID) {
 }
 
 void dsm::Server::disconnectRemote(BufferName name, uint32_t addr, uint8_t clientID, uint8_t serverID) {
-    RemoteBufferKey key(name, ip::udp::endpoint(ip::address_v4(addr), RECEIVER_BASE_PORT+serverID));
+    dsm::RemoteBufferKey key(name, ip::udp::endpoint(ip::address_v4(addr), RECEIVER_BASE_PORT+serverID));
     _remoteBufferLocalListeners[key].erase(clientID);
     _clientSubscriptions[clientID].second.erase(key);
     if (_remoteBufferLocalListeners[key].empty()) {
@@ -243,7 +243,7 @@ void dsm::Server::disconnectClient(uint8_t clientID) {
     _multicastPortOffsets[clientID] = 0;
 }
 
-void dsm::Server::removeLocalBuffer(LocalBufferKey key) {
+void dsm::Server::removeLocalBuffer(dsm::LocalBufferKey key) {
     LOG(_logger, trace) << "REMOVING LOCAL BUFFER " << key;
     interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(key);
@@ -255,7 +255,7 @@ void dsm::Server::removeLocalBuffer(LocalBufferKey key) {
     _localBufferMap->erase(key);
 }
 
-void dsm::Server::removeRemoteBuffer(RemoteBufferKey key) {
+void dsm::Server::removeRemoteBuffer(dsm::RemoteBufferKey key) {
     LOG(_logger, trace) << "REMOVING REMOTE BUFFER " << key;
 
     boost::unique_lock<boost::shared_mutex> fetchLock(_remoteBuffersToFetchMutex);
@@ -359,7 +359,7 @@ void dsm::Server::sendData() {
 void dsm::Server::sendHandler(const boost::system::error_code&, std::size_t) {}
 
 void dsm::Server::processRequest(ip::udp::endpoint remoteEndpoint) {
-    LocalBufferKey name(&_receiveBuffer[3], (uint8_t)_receiveBuffer[2]);
+    dsm::LocalBufferKey name(&_receiveBuffer[3], (uint8_t)_receiveBuffer[2]);
     remoteEndpoint.port(RECEIVER_BASE_PORT+(uint8_t)_receiveBuffer[1]);
     LOG(_logger, info) << "RECEIVED REQUEST FOR " << name << " FROM " << remoteEndpoint.address().to_string() << " " << remoteEndpoint.port();
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
@@ -374,7 +374,7 @@ void dsm::Server::processRequest(ip::udp::endpoint remoteEndpoint) {
 
 void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
     remoteEndpoint.port(RECEIVER_BASE_PORT+(uint8_t)_receiveBuffer[1]);
-    RemoteBufferKey key(&_receiveBuffer[11], _receiveBuffer[2], remoteEndpoint);
+    dsm::RemoteBufferKey key(&_receiveBuffer[11], _receiveBuffer[2], remoteEndpoint);
 
     //check if <name, addr, port> exists in remotes to create
     LOG(_logger, info) << "RECEIVED ACK FOR " << key;
@@ -429,7 +429,7 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
                                          timer));
 }
 
-void dsm::Server::processData(const boost::system::error_code &error, size_t bytesReceived, RemoteBufferKey key, boost::shared_ptr<ip::udp::socket> sock, ip::udp::endpoint sender, boost::shared_ptr<asio::deadline_timer> timer) {
+void dsm::Server::processData(const boost::system::error_code &error, size_t bytesReceived, dsm::RemoteBufferKey key, boost::shared_ptr<ip::udp::socket> sock, ip::udp::endpoint sender, boost::shared_ptr<asio::deadline_timer> timer) {
     LOG(_logger, periodic) << "RECEIVED DATA FOR REMOTE " << key;
     if (error) {
         LOG(_logger, severity_levels::error) << "ERROR PROCESSING DATA FOR " << key;
@@ -477,7 +477,7 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
                                          timer));
 }
 
-void dsm::Server::setBufferToInactive(const boost::system::error_code &error, RemoteBufferKey key) {
+void dsm::Server::setBufferToInactive(const boost::system::error_code &error, dsm::RemoteBufferKey key) {
     if (error) {
         if (error != boost::asio::error::operation_aborted) {
             LOG(_logger, severity_levels::error) << "ERROR SETTING BUFFER INACTIVE" << error.message();
