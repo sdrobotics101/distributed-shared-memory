@@ -11,7 +11,7 @@ namespace po = boost::program_options;
 
 boost::scoped_ptr<dsm::Server> _server;
 
-void signalHandler(int signum) {
+void signalHandler(int) {
     _server->stop();
 }
 
