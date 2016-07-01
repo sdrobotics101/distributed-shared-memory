@@ -1,0 +1,3 @@
+[submodule "src/Dependencies/Log"]
+	path = src/Dependencies/Log
+	url = git@github.com:rahulsalvi/Log.git

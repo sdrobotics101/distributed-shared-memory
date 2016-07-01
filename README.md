@@ -12,6 +12,7 @@ Synchronizes shared memory buffers between multiple machines
 ## Optional
  - Boost:
    - Log
+   - Date\_Time
    - Python3
 
 ## Known to work under

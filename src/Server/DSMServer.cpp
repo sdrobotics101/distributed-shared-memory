@@ -1,27 +1,5 @@
 #include "DSMServer.h"
 
-#ifdef LOGGING_ENABLED
-std::ostream& operator<<(std::ostream& stream, severity_levels level)
-{
-    static const char* strings[] =
-    {
-        "periodic",
-        "   trace",
-        " startup",
-        "teardown",
-        "    info",
-        "   error",
-        "   debug"
-    };
-    if (level >= 0 && level < 7) {
-        stream << strings[level];
-    } else {
-        stream << (int)(level);
-    }
-    return stream;
-}
-#endif
-
 dsm::Server::Server(uint8_t serverID) : Base("server"+std::to_string(serverID)),
                                         _isRunning(false),
                                         _serverID(serverID),
@@ -31,22 +9,12 @@ dsm::Server::Server(uint8_t serverID) : Base("server"+std::to_string(serverID)),
                                         _receiverSocket(_ioService, ip::udp::endpoint(ip::udp::v4(), RECEIVER_BASE_PORT+_serverID))
 {
 #ifdef LOGGING_ENABLED
-    logging::formatter format = logging::expressions::stream <<
-        "[" << severity << "] " <<
-        logging::expressions::smessage;
-
+    initializeLog();
 #ifdef LOG_LEVEL_INFO
-    logging::core::get()->set_filter(severity >= severity_levels::info);
+    setLogFilter(severityLevel::info);
 #else
-    logging::core::get()->set_filter(severity >= severity_levels::trace);
+    setLogFilter(severityLevel::trace);
 #endif
-
-    typedef logging::sinks::synchronous_sink<logging::sinks::text_ostream_backend> text_sink;
-    boost::shared_ptr<text_sink> sink = boost::make_shared<text_sink>();
-    boost::shared_ptr<std::ostream> stream(&std::clog, boost::empty_deleter());
-    sink->locked_backend()->add_stream(stream);
-    sink->set_formatter(format);
-    logging::core::get()->add_sink(sink);
 #endif
 
     for (int i = 0; i < MAX_CLIENTS; i++) {
@@ -135,7 +103,7 @@ void dsm::Server::start() {
                 LOG(_logger, info) << "CLIENT CONNECTED WITHOUT RESET: " << (int)_message.clientID;
                 break;
             default:
-                LOG(_logger, severity_levels::error) << "UNKNOWN COMMAND";
+                LOG(_logger, severityLevel::error) << "UNKNOWN COMMAND";
                 break;
         }
     }
@@ -159,7 +127,7 @@ void dsm::Server::createLocalBuffer(dsm::LocalBufferKey key, uint16_t size, uint
         return;
     } else {
         if (!localOnly && _multicastPortOffsets[clientID] >= MAX_BUFFERS_PER_CLIENT) {
-            LOG(_logger, severity_levels::error) << "CLIENT " << (int)clientID << " HAS TOO MANY LOCAL BUFFERS";
+            LOG(_logger, severityLevel::error) << "CLIENT " << (int)clientID << " HAS TOO MANY LOCAL BUFFERS";
             return;
         }
     }
@@ -305,7 +273,7 @@ void dsm::Server::sendACKs() {
         boost::array<char, MAX_NAME_SIZE+11> sendBuffer;
         uint16_t multicastPort = std::get<3>(iterator->second).port();
         if (multicastPort == 0) {
-            LOG(_logger, severity_levels::error) << "BUFFER " << i.first << " IS LOCAL ONLY";
+            LOG(_logger, severityLevel::error) << "BUFFER " << i.first << " IS LOCAL ONLY";
             sendBuffer[0] = 2; //so the other servers know this is local only
         } else {
             uint16_t len = std::get<1>(iterator->second);
@@ -368,7 +336,7 @@ void dsm::Server::processRequest(ip::udp::endpoint remoteEndpoint) {
         boost::unique_lock<boost::shared_mutex> lock(_remoteServersToACKMutex);
         _remoteServersToACK[name].push_back(remoteEndpoint);
     } else {
-        LOG(_logger, severity_levels::error) << "COULDN'T FIND BUFFER " << name;
+        LOG(_logger, severityLevel::error) << "COULDN'T FIND BUFFER " << name;
     }
 }
 
@@ -385,7 +353,7 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
     boost::unique_lock<boost::shared_mutex> lock(_remoteBuffersToFetchMutex);
     _remoteBuffersToFetch.erase(key);
     if (localOnly) {
-        LOG(_logger, severity_levels::error) << "BUFFER " << key << " IS MARKED LOCAL ONLY";
+        LOG(_logger, severityLevel::error) << "BUFFER " << key << " IS MARKED LOCAL ONLY";
         return;
     }
 
@@ -432,20 +400,20 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
 void dsm::Server::processData(const boost::system::error_code &error, size_t bytesReceived, dsm::RemoteBufferKey key, boost::shared_ptr<ip::udp::socket> sock, ip::udp::endpoint sender, boost::shared_ptr<asio::deadline_timer> timer) {
     LOG(_logger, periodic) << "RECEIVED DATA FOR REMOTE " << key;
     if (error) {
-        LOG(_logger, severity_levels::error) << "ERROR PROCESSING DATA FOR " << key;
+        LOG(_logger, severityLevel::error) << "ERROR PROCESSING DATA FOR " << key;
         _remoteReceiveBuffers.erase(key);
         return;
     }
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
-        LOG(_logger, severity_levels::error) << "MAP ENTRY FOR " << key << " DOESN'T EXIST";
+        LOG(_logger, severityLevel::error) << "MAP ENTRY FOR " << key << " DOESN'T EXIST";
         _remoteReceiveBuffers.erase(key);
         return;
     }
     uint16_t len = std::get<1>(iterator->second);
     if (len != bytesReceived) {
-        LOG(_logger, severity_levels::error) << "RECEIVED " << bytesReceived << " BYTES WHEN " << len << " WERE EXPECTED";
+        LOG(_logger, severityLevel::error) << "RECEIVED " << bytesReceived << " BYTES WHEN " << len << " WERE EXPECTED";
         _remoteReceiveBuffers.erase(key);
         return;
     }
@@ -480,7 +448,7 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
 void dsm::Server::setBufferToInactive(const boost::system::error_code &error, dsm::RemoteBufferKey key) {
     if (error) {
         if (error != boost::asio::error::operation_aborted) {
-            LOG(_logger, severity_levels::error) << "ERROR SETTING BUFFER INACTIVE" << error.message();
+            LOG(_logger, severityLevel::error) << "ERROR SETTING BUFFER INACTIVE" << error.message();
         }
         return;
     }
