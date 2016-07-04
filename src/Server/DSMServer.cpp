@@ -9,11 +9,11 @@ dsm::Server::Server(uint8_t serverID) : Base("server"+std::to_string(serverID)),
                                         _receiverSocket(_ioService, ip::udp::endpoint(ip::udp::v4(), RECEIVER_BASE_PORT+_serverID))
 {
 #ifdef LOGGING_ENABLED
-    initializeLog();
+    log::initializeLog();
 #ifdef LOG_LEVEL_INFO
-    setLogFilter(severityLevel::info);
+    log::setLogFilter(log::severityLevel::info);
 #else
-    setLogFilter(severityLevel::trace);
+    log::setLogFilter(log::severityLevel::trace);
 #endif
 #endif
 
@@ -21,7 +21,7 @@ dsm::Server::Server(uint8_t serverID) : Base("server"+std::to_string(serverID)),
         _multicastPortOffsets[i] = 0;
     }
 
-    LOG(_logger, startup) << "CONSTRUCTED SERVER";
+    LOG(_logger, log::severityLevel::startup) << "CONSTRUCTED SERVER";
 }
 
 //TODO is the ordering on this unsafe?
@@ -49,7 +49,7 @@ dsm::Server::~Server() {
     interprocess::message_queue::remove((_name+"_queue").c_str());
     interprocess::shared_memory_object::remove(_name.c_str());
 
-    LOG(_logger, teardown) << "DESTROYED SERVER";
+    LOG(_logger, log::severityLevel::teardown) << "DESTROYED SERVER";
 }
 
 void dsm::Server::start() {
@@ -59,7 +59,7 @@ void dsm::Server::start() {
     _receiverThread.reset(new boost::thread(boost::bind(&Server::receiverThreadFunction, this)));
     _handlerThread.reset(new boost::thread(boost::bind(&Server::handlerThreadFunction, this)));
 
-    LOG(_logger, startup) << "MAIN LOOP START";
+    LOG(_logger, log::severityLevel::startup) << "MAIN LOOP START";
 
     unsigned int priority;
     interprocess::message_queue::size_type receivedSize;
@@ -72,46 +72,46 @@ void dsm::Server::start() {
 
         switch(_message.options) {
             case CREATE_LOCAL:
-                LOG(_logger, info) << "LOCAL: " << (int)_message.clientID << " {" << _message.name << ", " << _message.footer.size << "}";
+                LOG(_logger, log::severityLevel::info) << "LOCAL: " << (int)_message.clientID << " {" << _message.name << ", " << _message.footer.size << "}";
                 createLocalBuffer(_message.name, _message.footer.size, _message.clientID, false);
                 break;
             case CREATE_LOCALONLY:
-                LOG(_logger, info) << "LOCALONLY: " << (int)_message.clientID << " {" << _message.name << ", " << _message.footer.size << "}";
+                LOG(_logger, log::severityLevel::info) << "LOCALONLY: " << (int)_message.clientID << " {" << _message.name << ", " << _message.footer.size << "}";
                 createLocalBuffer(_message.name, _message.footer.size, _message.clientID, true);
                 break;
             case FETCH_REMOTE:
-                LOG(_logger, info) << "REMOTE: " << (int)_message.clientID << " {" << _message.name << ", " << ip::address_v4(_message.footer.ipaddr) << ", " << (int)_message.serverID << "}";
+                LOG(_logger, log::severityLevel::info) << "REMOTE: " << (int)_message.clientID << " {" << _message.name << ", " << ip::address_v4(_message.footer.ipaddr) << ", " << (int)_message.serverID << "}";
                 fetchRemoteBuffer(_message.name, _message.footer.ipaddr, _message.clientID, _message.serverID);
                 break;
             case DISCONNECT_LOCAL:
-                LOG(_logger, info) << "REMOVE LOCAL LISTENER: " << (int)_message.clientID << " " << _message.name;
+                LOG(_logger, log::severityLevel::info) << "REMOVE LOCAL LISTENER: " << (int)_message.clientID << " " << _message.name;
                 disconnectLocal(_message.name, _message.clientID);
                 break;
             case DISCONNECT_REMOTE:
-                LOG(_logger, info) << "REMOVE REMOTE LISTENER: " << (int)_message.clientID << " " << _message.name;
+                LOG(_logger, log::severityLevel::info) << "REMOVE REMOTE LISTENER: " << (int)_message.clientID << " " << _message.name;
                 disconnectRemote(_message.name, _message.footer.ipaddr, _message.clientID, _message.serverID);
                 break;
             case DISCONNECT_CLIENT:
-                LOG(_logger, info) << "CLIENT DISCONNECTED: " << (int)_message.clientID;
+                LOG(_logger, log::severityLevel::info) << "CLIENT DISCONNECTED: " << (int)_message.clientID;
                 disconnectClient(_message.clientID);
                 break;
             case CONNECT_CLIENT:
-                LOG(_logger, info) << "CLIENT CONNECTED: " << (int)_message.clientID;
+                LOG(_logger, log::severityLevel::info) << "CLIENT CONNECTED: " << (int)_message.clientID;
                 disconnectClient(_message.clientID);    //the reset and disconnect behavior is the same
                 break;
             case CONNECT_CLIENT_NORESET:
-                LOG(_logger, info) << "CLIENT CONNECTED WITHOUT RESET: " << (int)_message.clientID;
+                LOG(_logger, log::severityLevel::info) << "CLIENT CONNECTED WITHOUT RESET: " << (int)_message.clientID;
                 break;
             default:
-                LOG(_logger, severityLevel::error) << "UNKNOWN COMMAND";
+                LOG(_logger, log::severityLevel::error) << "UNKNOWN COMMAND";
                 break;
         }
     }
-    LOG(_logger, teardown) << "MAIN LOOP END";
+    LOG(_logger, log::severityLevel::teardown) << "MAIN LOOP END";
 }
 
 void dsm::Server::stop() {
-    LOG(_logger, teardown) << "SERVER STOPPING";
+    LOG(_logger, log::severityLevel::teardown) << "SERVER STOPPING";
     _isRunning = false;
     uint8_t ignorePacket = -1;
     _senderSocket.send_to(asio::buffer(&ignorePacket, 1), ip::udp::endpoint(ip::address::from_string("127.0.0.1"), RECEIVER_BASE_PORT+_serverID));
@@ -119,7 +119,7 @@ void dsm::Server::stop() {
 }
 
 void dsm::Server::createLocalBuffer(dsm::LocalBufferKey key, uint16_t size, uint8_t clientID, bool localOnly) {
-    LOG(_logger, trace) << "CREATING LOCAL BUFFER: " << key;
+    LOG(_logger, log::severityLevel::trace) << "CREATING LOCAL BUFFER: " << key;
     interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     if (_localBufferMap->find(key) != _localBufferMap->end()) {
         _localBufferLocalListeners[key].insert(clientID);
@@ -127,7 +127,7 @@ void dsm::Server::createLocalBuffer(dsm::LocalBufferKey key, uint16_t size, uint
         return;
     } else {
         if (!localOnly && _multicastPortOffsets[clientID] >= MAX_BUFFERS_PER_CLIENT) {
-            LOG(_logger, severityLevel::error) << "CLIENT " << (int)clientID << " HAS TOO MANY LOCAL BUFFERS";
+            LOG(_logger, log::severityLevel::error) << "CLIENT " << (int)clientID << " HAS TOO MANY LOCAL BUFFERS";
             return;
         }
     }
@@ -149,7 +149,7 @@ void dsm::Server::createLocalBuffer(dsm::LocalBufferKey key, uint16_t size, uint
 }
 
 void dsm::Server::createRemoteBuffer(dsm::RemoteBufferKey key, uint16_t size) {
-    LOG(_logger, trace) << "CREATING REMOTE BUFFER: " << key;
+    LOG(_logger, log::severityLevel::trace) << "CREATING REMOTE BUFFER: " << key;
 
     void* buf = _segment.allocate(size);
     interprocess::managed_shared_memory::handle_t handle = _segment.get_handle_from_address(buf);
@@ -163,7 +163,7 @@ void dsm::Server::createRemoteBuffer(dsm::RemoteBufferKey key, uint16_t size) {
 void dsm::Server::fetchRemoteBuffer(BufferName name, uint32_t addr, uint8_t clientID, uint8_t serverID) {
     ip::udp::endpoint endpoint(ip::address_v4(addr), RECEIVER_BASE_PORT+serverID);
     dsm::RemoteBufferKey key(name, endpoint);
-    LOG(_logger, trace) << "FETCHING REMOTE BUFFER: " << key;
+    LOG(_logger, log::severityLevel::trace) << "FETCHING REMOTE BUFFER: " << key;
     _remoteBufferLocalListeners[key].insert(clientID);
     _clientSubscriptions[clientID].second.insert(key);
 
@@ -212,7 +212,7 @@ void dsm::Server::disconnectClient(uint8_t clientID) {
 }
 
 void dsm::Server::removeLocalBuffer(dsm::LocalBufferKey key) {
-    LOG(_logger, trace) << "REMOVING LOCAL BUFFER " << key;
+    LOG(_logger, log::severityLevel::trace) << "REMOVING LOCAL BUFFER " << key;
     interprocess::scoped_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(key);
     if (iterator == _localBufferMap->end()) {
@@ -224,7 +224,7 @@ void dsm::Server::removeLocalBuffer(dsm::LocalBufferKey key) {
 }
 
 void dsm::Server::removeRemoteBuffer(dsm::RemoteBufferKey key) {
-    LOG(_logger, trace) << "REMOVING REMOTE BUFFER " << key;
+    LOG(_logger, log::severityLevel::trace) << "REMOVING REMOTE BUFFER " << key;
 
     boost::unique_lock<boost::shared_mutex> fetchLock(_remoteBuffersToFetchMutex);
     auto fetchIterator = _remoteBuffersToFetch.find(key);
@@ -247,7 +247,7 @@ void dsm::Server::removeRemoteBuffer(dsm::RemoteBufferKey key) {
 void dsm::Server::sendRequests() {
     boost::shared_lock<boost::shared_mutex> lock(_remoteBuffersToFetchMutex);
     for (auto const &i : _remoteBuffersToFetch) {
-        LOG(_logger, trace) << "SENDING REQUEST " << i;
+        LOG(_logger, log::severityLevel::trace) << "SENDING REQUEST " << i;
         boost::array<char, MAX_NAME_SIZE+3> sendBuffer;
         sendBuffer[0] = 0;  //so the server knows it's a request
         sendBuffer[1] = _serverID;    //so the server knows who to ACK
@@ -273,7 +273,7 @@ void dsm::Server::sendACKs() {
         boost::array<char, MAX_NAME_SIZE+11> sendBuffer;
         uint16_t multicastPort = std::get<3>(iterator->second).port();
         if (multicastPort == 0) {
-            LOG(_logger, severityLevel::error) << "BUFFER " << i.first << " IS LOCAL ONLY";
+            LOG(_logger, log::severityLevel::error) << "BUFFER " << i.first << " IS LOCAL ONLY";
             sendBuffer[0] = 2; //so the other servers know this is local only
         } else {
             uint16_t len = std::get<1>(iterator->second);
@@ -289,7 +289,7 @@ void dsm::Server::sendACKs() {
         sendBuffer[2] = i.first.length;
         strcpy(&sendBuffer[11], i.first.name);
         for (auto const &j : i.second) {
-            LOG(_logger, trace) << "SENDING ACK " << i.first << " TO " << j.address().to_v4().to_string() << " " << j.port();
+            LOG(_logger, log::severityLevel::trace) << "SENDING ACK " << i.first << " TO " << j.address().to_v4().to_string() << " " << j.port();
             _senderSocket.async_send_to(asio::buffer(sendBuffer),
                                         j,
                                         boost::bind(&dsm::Server::sendHandler,
@@ -307,7 +307,7 @@ void dsm::Server::sendACKs() {
 void dsm::Server::sendData() {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     for (auto const &i : *_localBufferMap) {
-        LOG(_logger, periodic) << "SENDING DATA " << i.first << " TO " << std::get<3>(i.second).address() << " " << std::get<3>(i.second).port();
+        LOG(_logger, log::severityLevel::periodic) << "SENDING DATA " << i.first << " TO " << std::get<3>(i.second).address() << " " << std::get<3>(i.second).port();
         ip::udp::endpoint endpoint = std::get<3>(i.second);
         if (endpoint.port() == 0) {
             continue;
@@ -329,14 +329,14 @@ void dsm::Server::sendHandler(const boost::system::error_code&, std::size_t) {}
 void dsm::Server::processRequest(ip::udp::endpoint remoteEndpoint) {
     dsm::LocalBufferKey name(&_receiveBuffer[3], (uint8_t)_receiveBuffer[2]);
     remoteEndpoint.port(RECEIVER_BASE_PORT+(uint8_t)_receiveBuffer[1]);
-    LOG(_logger, info) << "RECEIVED REQUEST FOR " << name << " FROM " << remoteEndpoint.address().to_string() << " " << remoteEndpoint.port();
+    LOG(_logger, log::severityLevel::info) << "RECEIVED REQUEST FOR " << name << " FROM " << remoteEndpoint.address().to_string() << " " << remoteEndpoint.port();
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     if (_localBufferMap->find(name) != _localBufferMap->end()) {
         mapLock.unlock();
         boost::unique_lock<boost::shared_mutex> lock(_remoteServersToACKMutex);
         _remoteServersToACK[name].push_back(remoteEndpoint);
     } else {
-        LOG(_logger, severityLevel::error) << "COULDN'T FIND BUFFER " << name;
+        LOG(_logger, log::severityLevel::error) << "COULDN'T FIND BUFFER " << name;
     }
 }
 
@@ -345,7 +345,7 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
     dsm::RemoteBufferKey key(&_receiveBuffer[11], _receiveBuffer[2], remoteEndpoint);
 
     //check if <name, addr, port> exists in remotes to create
-    LOG(_logger, info) << "RECEIVED ACK FOR " << key;
+    LOG(_logger, log::severityLevel::info) << "RECEIVED ACK FOR " << key;
     if (_remoteBuffersToFetch.find(key) == _remoteBuffersToFetch.end()) {
         return;
     }
@@ -353,7 +353,7 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
     boost::unique_lock<boost::shared_mutex> lock(_remoteBuffersToFetchMutex);
     _remoteBuffersToFetch.erase(key);
     if (localOnly) {
-        LOG(_logger, severityLevel::error) << "BUFFER " << key << " IS MARKED LOCAL ONLY";
+        LOG(_logger, log::severityLevel::error) << "BUFFER " << key << " IS MARKED LOCAL ONLY";
         return;
     }
 
@@ -398,22 +398,22 @@ void dsm::Server::processACK(ip::udp::endpoint remoteEndpoint, bool localOnly) {
 }
 
 void dsm::Server::processData(const boost::system::error_code &error, size_t bytesReceived, dsm::RemoteBufferKey key, boost::shared_ptr<ip::udp::socket> sock, ip::udp::endpoint sender, boost::shared_ptr<asio::deadline_timer> timer) {
-    LOG(_logger, periodic) << "RECEIVED DATA FOR REMOTE " << key;
+    LOG(_logger, log::severityLevel::periodic) << "RECEIVED DATA FOR REMOTE " << key;
     if (error) {
-        LOG(_logger, severityLevel::error) << "ERROR PROCESSING DATA FOR " << key;
+        LOG(_logger, log::severityLevel::error) << "ERROR PROCESSING DATA FOR " << key;
         _remoteReceiveBuffers.erase(key);
         return;
     }
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     auto iterator = _remoteBufferMap->find(key);
     if (iterator == _remoteBufferMap->end()) {
-        LOG(_logger, severityLevel::error) << "MAP ENTRY FOR " << key << " DOESN'T EXIST";
+        LOG(_logger, log::severityLevel::error) << "MAP ENTRY FOR " << key << " DOESN'T EXIST";
         _remoteReceiveBuffers.erase(key);
         return;
     }
     uint16_t len = std::get<1>(iterator->second);
     if (len != bytesReceived) {
-        LOG(_logger, severityLevel::error) << "RECEIVED " << bytesReceived << " BYTES WHEN " << len << " WERE EXPECTED";
+        LOG(_logger, log::severityLevel::error) << "RECEIVED " << bytesReceived << " BYTES WHEN " << len << " WERE EXPECTED";
         _remoteReceiveBuffers.erase(key);
         return;
     }
@@ -426,7 +426,7 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
         interprocess::scoped_lock<interprocess_sharable_mutex> uniqueMapLock(*_remoteBufferMapLock);
         std::get<3>(iterator->second) = true;
         uniqueMapLock.unlock();
-        LOG(_logger, info) << "BUFFER " << key << " IS NOW ACTIVE";
+        LOG(_logger, log::severityLevel::info) << "BUFFER " << key << " IS NOW ACTIVE";
     }
     timer->expires_from_now(boost::posix_time::milliseconds(INACTIVITY_TIMEOUT));
     timer->async_wait(boost::bind(&dsm::Server::setBufferToInactive,
@@ -448,7 +448,7 @@ void dsm::Server::processData(const boost::system::error_code &error, size_t byt
 void dsm::Server::setBufferToInactive(const boost::system::error_code &error, dsm::RemoteBufferKey key) {
     if (error) {
         if (error != boost::asio::error::operation_aborted) {
-            LOG(_logger, severityLevel::error) << "ERROR SETTING BUFFER INACTIVE" << error.message();
+            LOG(_logger, log::severityLevel::error) << "ERROR SETTING BUFFER INACTIVE" << error.message();
         }
         return;
     }
@@ -458,29 +458,29 @@ void dsm::Server::setBufferToInactive(const boost::system::error_code &error, ds
         return;
     }
     std::get<3>(iterator->second) = false;
-    LOG(_logger, info) << "BUFFER " << key << " IS NOW INACTIVE";
+    LOG(_logger, log::severityLevel::info) << "BUFFER " << key << " IS NOW INACTIVE";
 }
 
 void dsm::Server::senderThreadFunction() {
-    LOG(_logger, startup) << "SENDER START";
+    LOG(_logger, log::severityLevel::startup) << "SENDER START";
     while (_isRunning.load()) {
-        LOG(_logger, periodic) << "SENDER";
+        LOG(_logger, log::severityLevel::periodic) << "SENDER";
         sendRequests();
         sendACKs();
         sendData();
         boost::this_thread::sleep_for(boost::chrono::milliseconds(SENDER_DELAY));
     }
-    LOG(_logger, teardown) << "SENDER END";
+    LOG(_logger, log::severityLevel::teardown) << "SENDER END";
 }
 
 void dsm::Server::receiverThreadFunction() {
-    LOG(_logger, startup) << "RECEIVER START";
+    LOG(_logger, log::severityLevel::startup) << "RECEIVER START";
     boost::system::error_code err;
     ip::udp::endpoint remoteEndpoint;
     while (_isRunning.load()) {
         _receiverSocket.receive_from(asio::buffer(_receiveBuffer), remoteEndpoint, 0, err);
 
-        LOG(_logger, periodic) << "RECEIVER GOT PACKET";
+        LOG(_logger, log::severityLevel::periodic) << "RECEIVER GOT PACKET";
 
         switch (_receiveBuffer[0]) {
             case 0:
@@ -493,15 +493,15 @@ void dsm::Server::receiverThreadFunction() {
                 processACK(remoteEndpoint, true);
                 break;
             default:
-                LOG(_logger, info) << "IGNORING PACKET";
+                LOG(_logger, log::severityLevel::info) << "IGNORING PACKET";
                 continue;
         }
     }
-    LOG(_logger, teardown) << "RECEIVER END";
+    LOG(_logger, log::severityLevel::teardown) << "RECEIVER END";
 }
 
 void dsm::Server::handlerThreadFunction() {
-    LOG(_logger, startup) << "HANDLE RECEIVE START";
+    LOG(_logger, log::severityLevel::startup) << "HANDLE RECEIVE START";
     _ioService.run();
-    LOG(_logger, teardown) << "HANDLE RECEIVE END";
+    LOG(_logger, log::severityLevel::teardown) << "HANDLE RECEIVE END";
 }

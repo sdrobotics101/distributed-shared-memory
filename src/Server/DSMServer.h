@@ -99,7 +99,7 @@ namespace dsm {
             boost::shared_mutex _remoteServersToACKMutex;
 
 #ifdef LOGGING_ENABLED
-            logging::sources::severity_logger_mt<severityLevel> _logger;
+            logging::sources::severity_logger_mt<log::severityLevel> _logger;
 #endif
     };
 }
