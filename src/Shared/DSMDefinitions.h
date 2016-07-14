@@ -31,7 +31,7 @@
 #define MAX_CLIENTS 256
 #define MAX_BUFFERS_PER_CLIENT 8
 
-#define SENDER_DELAY 100 //milliseconds
+#define SENDER_DELAY 20 //milliseconds
 #define INACTIVITY_TIMEOUT 1000 //milliseconds
 
 //message type codes
