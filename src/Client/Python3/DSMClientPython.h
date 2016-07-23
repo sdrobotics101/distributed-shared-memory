@@ -50,16 +50,20 @@ bool dsm::Client::PY_isRemoteActive(std::string name, std::string ipaddr, uint8_
     return isRemoteActive(createRemoteKey(name, ipaddr, serverID));
 }
 
-std::string dsm::Client::PY_getLocalBufferContents(std::string name) {
+python::list dsm::Client::PY_getLocalBufferContents(std::string name) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_localBufferMapLock);
     auto iterator = _localBufferMap->find(createLocalKey(name));
+    python::list buf;
     if (iterator == _localBufferMap->end()) {
-        return "";
+        return buf;
     }
     interprocess::sharable_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     uint16_t len = std::get<1>(iterator->second);
-    return std::string((char*)ptr, len);
+    for (int i = 0; i < len; i++) {
+        buf.append<uint8_t>(*(((uint8_t*)ptr)+i));
+    }
+    return buf;
 }
 
 bool dsm::Client::PY_setLocalBufferContents(std::string name, std::string data) {
@@ -84,7 +88,11 @@ python::tuple dsm::Client::PY_getRemoteBufferContents(std::string name, std::str
     interprocess::sharable_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     uint16_t len = std::get<1>(iterator->second);
-    return python::make_tuple(std::string((char*)ptr, len), std::get<3>(iterator->second));
+    python::list buf;
+    for (int i = 0; i < len; i++) {
+        buf.append<uint8_t>(*(((uint8_t*)ptr)+i));
+    }
+    return python::make_tuple(buf, std::get<3>(iterator->second));
 }
 
 #endif //DSMCLIENT_PYTHON_H

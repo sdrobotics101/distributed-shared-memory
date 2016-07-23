@@ -55,7 +55,7 @@ namespace dsm {
 
             bool PY_isRemoteActive(std::string name, std::string ipaddr, uint8_t serverID);
 
-            std::string PY_getLocalBufferContents(std::string name);
+            boost::python::list PY_getLocalBufferContents(std::string name);
             bool PY_setLocalBufferContents(std::string name, std::string data);
 
             boost::python::tuple PY_getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID);
