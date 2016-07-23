@@ -82,13 +82,13 @@ bool dsm::Client::PY_setLocalBufferContents(std::string name, std::string data) 
 python::tuple dsm::Client::PY_getRemoteBufferContents(std::string name, std::string ipaddr, uint8_t serverID) {
     interprocess::sharable_lock<interprocess_sharable_mutex> mapLock(*_remoteBufferMapLock);
     auto iterator = _remoteBufferMap->find(createRemoteKey(name, ipaddr, serverID));
+    python::list buf;
     if (iterator == _remoteBufferMap->end()) {
-        return python::make_tuple("", false);
+        return python::make_tuple(buf, false);
     }
     interprocess::sharable_lock<interprocess_sharable_mutex> dataLock(*(std::get<2>(iterator->second).get()));
     void* ptr = _segment.get_address_from_handle(std::get<0>(iterator->second));
     uint16_t len = std::get<1>(iterator->second);
-    python::list buf;
     for (int i = 0; i < len; i++) {
         buf.append<uint8_t>(*(((uint8_t*)ptr)+i));
     }
