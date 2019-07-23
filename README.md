@@ -32,11 +32,18 @@ Synchronizes shared memory buffers between multiple machines
 - `sudo add-apt-repository ppa:george-edison55/cmake-3.x`
 - `sudo apt-get update`
 - `sudo apt-get install cmake`
-- `sudo apt-get install libboost1.55-all-dev`
+- `sudo apt-get install libboost1.62-all-dev`
+- `sudo ln -s /usr/lib/arm-linux-gnueabihf/libboost_python-py37.a /usr/lib/arm-linux-gnueabihf/libboost_python3.a`
+- `sudo ln -s /usr/lib/arm-linux-gnueabihf/libboost_python-py37.so /usr/lib/arm-linux-gnueabihf/libboost_python3.so`
 
 ### Install DSM
-- `git clone git@gitlab.com:sdrobotics101/DistributedSharedMemory.git`
-- `cd DistributedSharedMemory`
+- `git clone git@github.com:sdrobotics101/distributed-shared-memory.git`
+- `cd distributed-shared-memory`
 - `git submodule update --init`
-- `cmake CMakeLists.txt`
+- `mkdir build`
+- `cd build`
+- `cmake ..`
 - `make`
+
+### Usisng DSM with Python
+- Add pydsm.so to path ie. sys.path.append("/home/pi/distributed-shared-memory")
